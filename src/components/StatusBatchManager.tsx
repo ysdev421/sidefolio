@@ -5,11 +5,12 @@ import type { Product } from '@/types';
 interface StatusBatchManagerProps {
   products: Product[];
   onBulkUpdate: (ids: string[], status: 'pending' | 'inventory') => Promise<void>;
+  onBulkChannelUpdate: (ids: string[], channel: 'ebay' | 'kaitori') => Promise<void>;
 }
 
 type StatusFilter = 'all' | 'pending' | 'inventory';
 
-export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManagerProps) {
+export function StatusBatchManager({ products, onBulkUpdate, onBulkChannelUpdate }: StatusBatchManagerProps) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [targetStatus, setTargetStatus] = useState<'pending' | 'inventory'>('inventory');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -17,6 +18,7 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [targetChannel, setTargetChannel] = useState<'ebay' | 'kaitori'>('ebay');
 
   const candidates = useMemo(() => {
     const base = products.filter((p) => p.status !== 'sold');
@@ -58,6 +60,26 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
       setShowConfirm(false);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '一括更新に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyBulkChannel = async () => {
+    const ids = Object.entries(selectedIds).filter(([, checked]) => checked).map(([id]) => id);
+    if (ids.length === 0) {
+      setMessage('変更対象を選択してください');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+    try {
+      await onBulkChannelUpdate(ids, targetChannel);
+      setSelectedIds({});
+      setMessage(`${ids.length}件の販路を${targetChannel === 'ebay' ? 'eBay' : '買取'}に変更しました`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '販路の一括更新に失敗しました');
     } finally {
       setLoading(false);
     }
@@ -126,6 +148,26 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
             一括変更
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
+          <span className="text-xs font-semibold text-slate-500">仮置き: 販路一括変更</span>
+          <select
+            value={targetChannel}
+            onChange={(e) => setTargetChannel(e.target.value as 'ebay' | 'kaitori')}
+            className="input-field max-w-[170px]"
+          >
+            <option value="ebay">eBayに変更</option>
+            <option value="kaitori">買取に変更</option>
+          </select>
+          <button
+            onClick={applyBulkChannel}
+            disabled={loading || selectedCount === 0}
+            className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 inline-flex items-center gap-2"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
+            販路を変更
           </button>
         </div>
         {message && <p className="text-sm text-slate-700">{message}</p>}

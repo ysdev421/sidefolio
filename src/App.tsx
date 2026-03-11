@@ -108,6 +108,10 @@ function App() {
     });
   };
 
+  const bulkUpdateChannel = async (ids: string[], channel: 'ebay' | 'kaitori') => {
+    await Promise.all(ids.map((id) => updateProductData(id, { channel })));
+  };
+
   const changePeriodFilter = (value: 'thisMonth' | 'lastMonth' | 'thisYear' | 'all') => {
     setDashboardLoading(true);
     setPeriodFilter(value);
@@ -182,7 +186,11 @@ function App() {
           {appView === 'purchaseLocationMaster' ? (
             <PurchaseLocationMaster userId={user.id} />
           ) : appView === 'statusBatchManager' ? (
-            <StatusBatchManager products={filteredProducts} onBulkUpdate={bulkUpdateStatus} />
+            <StatusBatchManager
+              products={filteredProducts}
+              onBulkUpdate={bulkUpdateStatus}
+              onBulkChannelUpdate={bulkUpdateChannel}
+            />
           ) : screen === 'summary' ? (
             <section>
               <div className="mb-4">
