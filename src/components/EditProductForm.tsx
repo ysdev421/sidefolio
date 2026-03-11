@@ -15,6 +15,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   const { updateProductData } = useProducts(userId);
   const loading = useStore((state) => state.loading);
   const [showChannelField, setShowChannelField] = useState(false);
+  const [showCostDetails, setShowCostDetails] = useState(false);
 
   const [formData, setFormData] = useState({
     productName: product.productName,
@@ -203,7 +204,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">購入金額合計</label>
                   <input
@@ -211,33 +212,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                     required
                     value={formData.purchasePrice}
                     onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">支払いP利用</label>
-                  <input
-                    type="number"
-                    value={formData.purchasePointUsed}
-                    onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">クーポン値引き</label>
-                  <input
-                    type="number"
-                    value={formData.couponDiscount}
-                    onChange={(e) => setFormData({ ...formData, couponDiscount: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">獲得P今すぐ利用</label>
-                  <input
-                    type="number"
-                    value={formData.instantPointUse}
-                    onChange={(e) => setFormData({ ...formData, instantPointUse: e.target.value })}
                     className="input-field"
                   />
                 </div>
@@ -252,7 +226,61 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCostDetails((v) => !v)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-sm"
+                >
+                  {showCostDetails ? '内訳入力を閉じる' : '内訳入力を開く（任意）'}
+                </button>
+
+                {showCostDetails && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">支払いP利用</label>
+                      <input
+                        type="number"
+                        value={formData.purchasePointUsed}
+                        onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">クーポン値引き</label>
+                      <input
+                        type="number"
+                        value={formData.couponDiscount}
+                        onChange={(e) => setFormData({ ...formData, couponDiscount: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">獲得P今すぐ利用</label>
+                      <input
+                        type="number"
+                        value={formData.instantPointUse}
+                        onChange={(e) => setFormData({ ...formData, instantPointUse: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="glass-panel p-3 text-sm">
+                <p className="text-slate-700">
+                  実支払額:
+                  <span className="ml-2 font-bold text-slate-900">
+                    {(() => {
+                      const purchase = parseFloat(formData.purchasePrice) || 0;
+                      const used = parseFloat(formData.purchasePointUsed) || 0;
+                      const coupon = parseFloat(formData.couponDiscount) || 0;
+                      const instant = parseFloat(formData.instantPointUse) || 0;
+                      return `${purchase - used - coupon - instant} 円`;
+                    })()}
+                  </span>
+                </p>
                 <p className="text-slate-700">
                   実質原価:
                   <span className="ml-2 font-bold text-slate-900">
@@ -262,12 +290,12 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                       const coupon = parseFloat(formData.couponDiscount) || 0;
                       const instant = parseFloat(formData.instantPointUse) || 0;
                       const earned = parseFloat(formData.point) || 0;
-                      return `${purchase + used + coupon + instant - earned} 円`;
+                      return `${purchase - used - coupon - instant - earned} 円`;
                     })()}
                   </span>
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  購入金額合計 + 支払いP利用 + クーポン値引き + 獲得P今すぐ利用 - 付与ポイント
+                  購入金額合計 - 支払いP利用 - クーポン値引き - 獲得P今すぐ利用 - 付与ポイント
                 </p>
               </div>
 

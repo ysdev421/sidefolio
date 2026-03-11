@@ -43,6 +43,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
   const [janLookupLoading, setJanLookupLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
+  const [showCostDetails, setShowCostDetails] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
   const [kaitoriCandidates, setKaitoriCandidates] = useState<ProductTemplate[]>([]);
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
@@ -460,38 +461,52 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">支払いポイント利用</label>
-              <input
-                type="number"
-                value={formData.purchasePointUsed}
-                onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
-                className="input-field"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">クーポン値引き</label>
-              <input
-                type="number"
-                value={formData.couponDiscount}
-                onChange={(e) => setFormData({ ...formData, couponDiscount: e.target.value })}
-                className="input-field"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">獲得P今すぐ利用</label>
-              <input
-                type="number"
-                value={formData.instantPointUse}
-                onChange={(e) => setFormData({ ...formData, instantPointUse: e.target.value })}
-                className="input-field"
-                placeholder="0"
-              />
-            </div>
-            <div>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowCostDetails((v) => !v)}
+              className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-sm"
+            >
+              {showCostDetails ? '内訳入力を閉じる' : '内訳入力を開く（任意）'}
+            </button>
+
+            {showCostDetails && (
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">支払いポイント利用</label>
+                  <input
+                    type="number"
+                    value={formData.purchasePointUsed}
+                    onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
+                    className="input-field"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">クーポン値引き</label>
+                  <input
+                    type="number"
+                    value={formData.couponDiscount}
+                    onChange={(e) => setFormData({ ...formData, couponDiscount: e.target.value })}
+                    className="input-field"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">獲得P今すぐ利用</label>
+                  <input
+                    type="number"
+                    value={formData.instantPointUse}
+                    onChange={(e) => setFormData({ ...formData, instantPointUse: e.target.value })}
+                    className="input-field"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">付与ポイント</label>
             <input
               type="number"
@@ -500,10 +515,21 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               className="input-field"
               placeholder="0"
             />
-            </div>
           </div>
 
           <div className="glass-panel p-3 text-sm">
+            <p className="text-slate-700">
+              実支払額:
+              <span className="ml-2 font-bold text-slate-900">
+                {(() => {
+                  const purchase = parseFloat(formData.purchasePrice) || 0;
+                  const used = parseFloat(formData.purchasePointUsed) || 0;
+                  const coupon = parseFloat(formData.couponDiscount) || 0;
+                  const instant = parseFloat(formData.instantPointUse) || 0;
+                  return `${purchase - used - coupon - instant} 円`;
+                })()}
+              </span>
+            </p>
             <p className="text-slate-700">
               実質原価:
               <span className="ml-2 font-bold text-slate-900">
@@ -513,12 +539,12 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
                   const coupon = parseFloat(formData.couponDiscount) || 0;
                   const instant = parseFloat(formData.instantPointUse) || 0;
                   const earned = parseFloat(formData.point) || 0;
-                  return `${purchase + used + coupon + instant - earned} 円`;
+                  return `${purchase - used - coupon - instant - earned} 円`;
                 })()}
               </span>
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              購入金額合計 + 支払いP利用 + クーポン値引き + 獲得P今すぐ利用 - 付与ポイント
+              購入金額合計 - 支払いP利用 - クーポン値引き - 獲得P今すぐ利用 - 付与ポイント
             </p>
           </div>
 

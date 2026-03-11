@@ -1,16 +1,16 @@
 ﻿import type { Product, ProfitSummary } from '@/types';
 
-export function getPurchaseBaseCost(product: Product): number {
+export function getActualPayment(product: Product): number {
   return (
-    product.purchasePrice +
-    (product.purchasePointUsed || 0) +
-    (product.couponDiscount || 0) +
+    product.purchasePrice -
+    (product.purchasePointUsed || 0) -
+    (product.couponDiscount || 0) -
     (product.instantPointUse || 0)
   );
 }
 
 export function getEffectiveCost(product: Product): number {
-  return getPurchaseBaseCost(product) - product.point;
+  return getActualPayment(product) - product.point;
 }
 
 export function calculateProfit(product: Product): number {
@@ -20,7 +20,7 @@ export function calculateProfit(product: Product): number {
 
 export function calculatePointProfit(product: Product): number {
   if (!product.salePrice) return 0;
-  return product.salePrice - getPurchaseBaseCost(product);
+  return product.salePrice - getActualPayment(product);
 }
 
 export function calculateProfitSummary(products: Product[]): ProfitSummary {
@@ -32,7 +32,7 @@ export function calculateProfitSummary(products: Product[]): ProfitSummary {
   const totalRevenue = sold.reduce((sum, p) => sum + (p.salePrice || 0), 0);
   const totalProfit = sold.reduce((sum, p) => sum + calculateProfit(p), 0);
   const totalPointProfit = sold.reduce((sum, p) => sum + calculatePointProfit(p), 0);
-  const inventoryValue = inventory.reduce((sum, p) => sum + getPurchaseBaseCost(p), 0);
+  const inventoryValue = inventory.reduce((sum, p) => sum + getActualPayment(p), 0);
 
   return {
     totalProducts: products.length,
