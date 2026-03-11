@@ -58,6 +58,21 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [confirmItems, setConfirmItems] = useState<SaleBatchItem[]>([]);
   const [finalPrices, setFinalPrices] = useState<Record<string, string>>({});
 
+  const confirmPreview = useMemo(() => {
+    const totals = confirmItems.reduce(
+      (acc, item) => {
+        const final = Number(finalPrices[item.id] || 0);
+        const unitCost = Math.max(0, item.purchasePrice + (item.purchasePointUsed || 0) - item.point);
+        const cost = unitCost * item.quantity;
+        acc.revenue += final;
+        acc.cost += cost;
+        return acc;
+      },
+      { revenue: 0, cost: 0 }
+    );
+    return { ...totals, profit: totals.revenue - totals.cost };
+  }, [confirmItems, finalPrices]);
+
   const candidates = useMemo(
     () => products.filter((p) => p.status === 'pending' || p.status === 'inventory'),
     [products]
@@ -354,6 +369,14 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
                   />
                 </div>
               ))}
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <p className="text-slate-700">売却合計見込み: <span className="font-semibold">{confirmPreview.revenue.toLocaleString('ja-JP')} 円</span></p>
+              <p className="text-slate-700">原価合計見込み: <span className="font-semibold">{confirmPreview.cost.toLocaleString('ja-JP')} 円</span></p>
+              <p className={`font-semibold ${confirmPreview.profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                利益見込み: {confirmPreview.profit.toLocaleString('ja-JP')} 円
+              </p>
             </div>
 
             <div className="mt-4 flex justify-end gap-2">

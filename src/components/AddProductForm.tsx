@@ -37,11 +37,13 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
   });
 
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [janHint, setJanHint] = useState('');
   const [janLookupLoading, setJanLookupLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [showCostDetails, setShowCostDetails] = useState(false);
+  const [keepOpenAfterSubmit, setKeepOpenAfterSubmit] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
   const [kaitoriCandidates, setKaitoriCandidates] = useState<ProductTemplate[]>([]);
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
@@ -65,13 +67,24 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
     const loadLocations = async () => {
       try {
         const rows = await getUserPurchaseLocations(userId);
-        setPurchaseLocations(rows.length > 0 ? rows : ['メルカリ']);
+        const base = rows.length > 0 ? rows : ['メルカリ'];
+        let sorted = base;
+        try {
+          const raw = localStorage.getItem('purchaseLocationRecent');
+          const recent = raw ? (JSON.parse(raw) as string[]) : [];
+          if (Array.isArray(recent) && recent.length > 0) {
+            sorted = Array.from(new Set([...recent, ...base])).filter(Boolean);
+          }
+        } catch {
+          sorted = base;
+        }
+        setPurchaseLocations(sorted);
         setFormData((prev) => ({
           ...prev,
           purchaseLocation:
-            prev.purchaseLocation && rows.includes(prev.purchaseLocation)
+            prev.purchaseLocation && sorted.includes(prev.purchaseLocation)
               ? prev.purchaseLocation
-              : rows[0] || 'メルカリ',
+              : sorted[0] || 'メルカリ',
         }));
       } catch {
         setPurchaseLocations(['メルカリ']);
@@ -208,18 +221,24 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
     try {
       const normalizedJan = normalizeJanCode(formData.janCode);
+      const nextFieldErrors: Record<string, string> = {};
+      if (!formData.purchasePrice.trim()) nextFieldErrors.purchasePrice = '購入金額は必須です';
       if (isKaitori) {
         if (!normalizedJan) {
-          setError('買取流しはJANコード必須です。JAN検索またはカメラ読取で選択してください');
-          return;
+          nextFieldErrors.janCode = '買取流しはJAN必須です';
         }
         if (!formData.productName.trim()) {
-          setError('買取流しは商品名またはJANで候補を選択してください');
-          return;
+          nextFieldErrors.productName = 'JAN検索で商品を確定してください';
         }
+      }
+      if (Object.keys(nextFieldErrors).length > 0) {
+        setFieldErrors(nextFieldErrors);
+        setError('未入力または未確定の項目があります');
+        return;
       }
 
       const qty = Math.max(1, parseInt(formData.quantity, 10) || 1);
@@ -256,6 +275,14 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         productName: formData.productName,
       });
 
+      try {
+        const current = JSON.parse(localStorage.getItem('purchaseLocationRecent') || '[]') as string[];
+        const next = Array.from(new Set([formData.purchaseLocation, ...current])).slice(0, 10);
+        localStorage.setItem('purchaseLocationRecent', JSON.stringify(next));
+      } catch {
+        // noop
+      }
+
       setFormData({
         janCode: '',
         productName: '',
@@ -268,7 +295,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         purchaseLocation: purchaseLocations[0] || 'メルカリ',
       });
       setJanHint('');
-      onClose?.();
+      if (!keepOpenAfterSubmit) onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました');
     }
@@ -285,9 +312,17 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="glass-panel p-3">
+            <p className="text-xs font-semibold text-slate-700">
+              必須入力: {isKaitori ? 'JAN検索(またはカメラ)・商品名確定・数量・購入金額' : '商品名・数量・購入金額'}
+            </p>
+          </div>
           {isKaitori && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">商品名 or JAN検索 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                商品名 or JAN検索 *
+                <span className="ml-1 inline-flex px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px]">JAN必須</span>
+              </label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -325,6 +360,8 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
                   {janLookupLoading ? 'JANを照会中...' : janHint}
                 </p>
               )}
+              {fieldErrors.janCode && <p className="mt-1 text-xs text-rose-600">{fieldErrors.janCode}</p>}
+              <p className="mt-1 text-[11px] text-slate-500">JANは通常 8桁 または 13桁です</p>
               {kaitoriCandidates.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {kaitoriCandidates.map((t) => (
@@ -363,6 +400,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               placeholder={isKaitori ? 'JANから自動入力' : '例: チェキフィルム'}
               readOnly={isKaitori}
             />
+            {fieldErrors.productName && <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p>}
             {!isKaitori && candidateTemplates.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {candidateTemplates.map((t) => (
@@ -436,6 +474,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
                 className="input-field"
                 placeholder="0"
               />
+              {fieldErrors.purchasePrice && <p className="mt-1 text-xs text-rose-600">{fieldErrors.purchasePrice}</p>}
             </div>
           </div>
 
@@ -526,6 +565,11 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               ))}
             </select>
           </div>
+
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={keepOpenAfterSubmit} onChange={(e) => setKeepOpenAfterSubmit(e.target.checked)} />
+            登録後もこの画面を閉じない
+          </label>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
 

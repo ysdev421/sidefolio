@@ -1,5 +1,5 @@
-﻿import { useMemo, useState } from 'react';
-import { CircleDollarSign, Edit, Search, SlidersHorizontal } from 'lucide-react';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { CircleDollarSign, Copy, Edit, Search, SlidersHorizontal } from 'lucide-react';
 import { SaleForm } from './SaleForm';
 import { EditProductForm } from './EditProductForm';
 import { calculatePointProfit, calculateProfit, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
@@ -38,6 +38,33 @@ export function ProductList({ products, userId, onDelete }: ProductListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('purchaseDateDesc');
   const [showFilters, setShowFilters] = useState(false);
   const [showDateRange, setShowDateRange] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('productListFilters');
+      if (!raw) return;
+      const saved = JSON.parse(raw) as any;
+      if (typeof saved.query === 'string') setQuery(saved.query);
+      if (typeof saved.statusFilter === 'string') setStatusFilter(saved.statusFilter as StatusFilter);
+      if (typeof saved.fromDate === 'string') setFromDate(saved.fromDate);
+      if (typeof saved.toDate === 'string') setToDate(saved.toDate);
+      if (typeof saved.periodPreset === 'string') setPeriodPreset(saved.periodPreset as PeriodPreset);
+      if (typeof saved.sortKey === 'string') setSortKey(saved.sortKey as SortKey);
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        'productListFilters',
+        JSON.stringify({ query, statusFilter, fromDate, toDate, periodPreset, sortKey })
+      );
+    } catch {
+      // noop
+    }
+  }, [query, statusFilter, fromDate, toDate, periodPreset, sortKey]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -152,6 +179,28 @@ export function ProductList({ products, userId, onDelete }: ProductListProps) {
           <p className="text-xs text-soft mt-0.5">
             {formatDate(product.purchaseDate)} / {product.purchaseLocation}
           </p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold bg-sky-100 text-sky-700">
+              数量 {product.quantityAvailable ?? product.quantityTotal ?? 1}/{product.quantityTotal ?? 1}
+            </span>
+            {product.janCode && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(product.janCode || '');
+                  } catch {
+                    // noop
+                  }
+                }}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] border border-slate-200 text-slate-600 hover:bg-slate-50"
+                title="JANをコピー"
+              >
+                <Copy className="w-3 h-3" />
+                JANコピー
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-1 shrink-0">
@@ -316,3 +365,4 @@ export function ProductList({ products, userId, onDelete }: ProductListProps) {
     </div>
   );
 }
+

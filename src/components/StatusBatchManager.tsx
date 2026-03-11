@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { CheckSquare, Loader2 } from 'lucide-react';
 import type { Product } from '@/types';
 
@@ -16,20 +16,21 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const candidates = useMemo(() => {
     const base = products.filter((p) => p.status !== 'sold');
-    const filteredByStatus =
-      statusFilter === 'all' ? base : base.filter((p) => p.status === statusFilter);
-
+    const filteredByStatus = statusFilter === 'all' ? base : base.filter((p) => p.status === statusFilter);
     const q = query.trim().toLowerCase();
     if (!q) return filteredByStatus;
-    return filteredByStatus.filter((p) =>
-      [p.productName, p.purchaseLocation, p.janCode || ''].join(' ').toLowerCase().includes(q)
-    );
+    return filteredByStatus.filter((p) => [p.productName, p.purchaseLocation, p.janCode || ''].join(' ').toLowerCase().includes(q));
   }, [products, query, statusFilter]);
 
-  const selectedCount = Object.values(selectedIds).filter(Boolean).length;
+  const selectedProducts = useMemo(
+    () => candidates.filter((p) => selectedIds[p.id]),
+    [candidates, selectedIds]
+  );
+  const selectedCount = selectedProducts.length;
 
   const toggle = (id: string, checked: boolean) => {
     setSelectedIds((prev) => ({ ...prev, [id]: checked }));
@@ -37,17 +38,12 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
 
   const toggleAllVisible = (checked: boolean) => {
     const next: Record<string, boolean> = { ...selectedIds };
-    for (const p of candidates) {
-      next[p.id] = checked;
-    }
+    for (const p of candidates) next[p.id] = checked;
     setSelectedIds(next);
   };
 
   const applyBulk = async () => {
-    const ids = Object.entries(selectedIds)
-      .filter(([, checked]) => checked)
-      .map(([id]) => id);
-
+    const ids = Object.entries(selectedIds).filter(([, checked]) => checked).map(([id]) => id);
     if (ids.length === 0) {
       setMessage('変更対象を選択してください');
       return;
@@ -59,6 +55,7 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
       await onBulkUpdate(ids, targetStatus);
       setSelectedIds({});
       setMessage(`${ids.length}件を${targetStatus === 'inventory' ? '在庫' : '未着'}に変更しました`);
+      setShowConfirm(false);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '一括更新に失敗しました');
     } finally {
@@ -70,7 +67,7 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
     <section className="space-y-4">
       <div className="glass-panel p-5 space-y-3">
         <h2 className="text-lg font-bold text-slate-900">ステータス一括管理</h2>
-        <p className="text-sm text-slate-600">未着 / 在庫 をチェック選択して一括変更できます。</p>
+        <p className="text-sm text-slate-600">未着/在庫をチェック選択してまとめて変更できます</p>
 
         <input
           value={query}
@@ -80,37 +77,18 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
         />
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-              statusFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'
-            }`}
-          >
-            すべて
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('pending')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-              statusFilter === 'pending'
-                ? 'bg-slate-900 text-white'
-                : 'bg-white border border-slate-200 text-slate-700'
-            }`}
-          >
-            未着
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('inventory')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-              statusFilter === 'inventory'
-                ? 'bg-slate-900 text-white'
-                : 'bg-white border border-slate-200 text-slate-700'
-            }`}
-          >
-            在庫
-          </button>
+          {(['all', 'pending', 'inventory'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                statusFilter === s ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'
+              }`}
+            >
+              {s === 'all' ? 'すべて' : s === 'pending' ? '未着' : '在庫'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -127,37 +105,51 @@ export function StatusBatchManager({ products, onBulkUpdate }: StatusBatchManage
           {candidates.length === 0 && <p className="text-sm text-slate-500 p-2">対象データがありません</p>}
           {candidates.map((p) => (
             <label key={p.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/70">
-              <input
-                type="checkbox"
-                checked={!!selectedIds[p.id]}
-                onChange={(e) => toggle(p.id, e.target.checked)}
-              />
+              <input type="checkbox" checked={!!selectedIds[p.id]} onChange={(e) => toggle(p.id, e.target.checked)} />
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">{p.productName}</p>
-                <p className="text-xs text-slate-500">
-                  {p.status === 'pending' ? '未着' : '在庫'} / {p.purchaseLocation}
-                </p>
+                <p className="text-xs text-slate-500">{p.status === 'pending' ? '未着' : '在庫'} / {p.purchaseLocation}</p>
               </div>
             </label>
           ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={targetStatus}
-            onChange={(e) => setTargetStatus(e.target.value as 'pending' | 'inventory')}
-            className="input-field max-w-[160px]"
-          >
+          <select value={targetStatus} onChange={(e) => setTargetStatus(e.target.value as 'pending' | 'inventory')} className="input-field max-w-[170px]">
             <option value="inventory">在庫に変更</option>
             <option value="pending">未着に変更</option>
           </select>
-          <button onClick={applyBulk} disabled={loading} className="btn-primary px-4 py-2 rounded-xl inline-flex items-center gap-2">
+          <button
+            onClick={() => setShowConfirm(true)}
+            disabled={loading || selectedCount === 0}
+            className="btn-primary px-4 py-2 rounded-xl inline-flex items-center gap-2"
+          >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
             一括変更
           </button>
         </div>
         {message && <p className="text-sm text-slate-700">{message}</p>}
       </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-lg space-y-3">
+            <h3 className="font-bold text-slate-900">変更前確認</h3>
+            <p className="text-sm text-slate-600">
+              {selectedCount}件を「{targetStatus === 'inventory' ? '在庫' : '未着'}」へ変更します
+            </p>
+            <div className="max-h-48 overflow-auto border border-slate-200 rounded-xl p-2 text-sm space-y-1">
+              {selectedProducts.map((p) => (
+                <p key={p.id} className="text-slate-700 truncate">{p.productName} ({p.status === 'pending' ? '未着' : '在庫'}→{targetStatus === 'pending' ? '未着' : '在庫'})</p>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button className="px-3 py-2 rounded-lg border border-slate-200" onClick={() => setShowConfirm(false)}>キャンセル</button>
+              <button className="px-3 py-2 rounded-lg bg-slate-900 text-white" onClick={applyBulk}>確定</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

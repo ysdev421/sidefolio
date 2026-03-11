@@ -17,6 +17,8 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [search, setSearch] = useState('');
+  const [draggingLocation, setDraggingLocation] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -41,6 +43,10 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
   const sortedUsageNote = useMemo(
     () => locations.filter((name) => (usageCounts[name] || 0) > 0).length,
     [locations, usageCounts]
+  );
+  const visibleLocations = useMemo(
+    () => locations.filter((name) => name.toLowerCase().includes(search.trim().toLowerCase())),
+    [locations, search]
   );
 
   const addLocation = () => {
@@ -73,6 +79,19 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
     }
     setLocations((prev) => prev.filter((v) => v !== target));
     setMessage('');
+  };
+
+  const moveByDrag = (fromName: string, toName: string) => {
+    if (!fromName || !toName || fromName === toName) return;
+    setLocations((prev) => {
+      const fromIndex = prev.indexOf(fromName);
+      const toIndex = prev.indexOf(toName);
+      if (fromIndex < 0 || toIndex < 0) return prev;
+      const arr = [...prev];
+      const [item] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, item);
+      return arr;
+    });
   };
 
   const saveLocations = async () => {
@@ -137,18 +156,34 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
             追加
           </button>
         </div>
+        <div className="mt-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-field"
+            placeholder="購入場所を検索"
+          />
+        </div>
       </div>
 
       <div className="glass-panel p-5 space-y-2">
         {locations.length === 0 ? (
           <p className="text-sm text-slate-500">候補がありません。上で追加してください。</p>
         ) : (
-          locations.map((location, index) => {
+          visibleLocations.map((location) => {
+            const originalIndex = locations.indexOf(location);
             const usedCount = usageCounts[location] || 0;
             return (
               <div
                 key={location}
                 className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2 bg-white/60"
+                draggable
+                onDragStart={() => setDraggingLocation(location)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  moveByDrag(draggingLocation || '', location);
+                  setDraggingLocation(null);
+                }}
               >
                 <div className="min-w-0">
                   <span className="text-sm text-slate-800">{location}</span>
@@ -157,8 +192,8 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
                 <div className="inline-flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => moveLocation(index, -1)}
-                    disabled={index === 0}
+                    onClick={() => moveLocation(originalIndex, -1)}
+                    disabled={originalIndex === 0}
                     className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition disabled:opacity-40"
                     title="上へ"
                   >
@@ -166,8 +201,8 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveLocation(index, 1)}
-                    disabled={index === locations.length - 1}
+                    onClick={() => moveLocation(originalIndex, 1)}
+                    disabled={originalIndex === locations.length - 1}
                     className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition disabled:opacity-40"
                     title="下へ"
                   >

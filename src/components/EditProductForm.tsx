@@ -34,18 +34,30 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     saleDate: product.saleDate || '',
   });
   const [error, setError] = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useEffect(() => {
     const loadLocations = async () => {
       try {
         const rows = await getUserPurchaseLocations(userId);
-        setPurchaseLocations(rows.length > 0 ? rows : ['メルカリ']);
+        const base = rows.length > 0 ? rows : ['メルカリ'];
+        let sorted = base;
+        try {
+          const raw = localStorage.getItem('purchaseLocationRecent');
+          const recent = raw ? (JSON.parse(raw) as string[]) : [];
+          if (Array.isArray(recent) && recent.length > 0) {
+            sorted = Array.from(new Set([...recent, ...base])).filter(Boolean);
+          }
+        } catch {
+          sorted = base;
+        }
+        setPurchaseLocations(sorted);
         setFormData((prev) => ({
           ...prev,
           purchaseLocation:
-            prev.purchaseLocation && rows.includes(prev.purchaseLocation)
+            prev.purchaseLocation && sorted.includes(prev.purchaseLocation)
               ? prev.purchaseLocation
-              : rows[0] || 'メルカリ',
+              : sorted[0] || 'メルカリ',
         }));
       } catch {
         setPurchaseLocations(['メルカリ']);
@@ -53,6 +65,44 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     };
     loadLocations();
   }, [userId]);
+
+  const isDirty = JSON.stringify({
+    productName: formData.productName,
+    quantityTotal: formData.quantityTotal,
+    quantityAvailable: formData.quantityAvailable,
+    channel: formData.channel,
+    purchasePrice: formData.purchasePrice,
+    purchasePointUsed: formData.purchasePointUsed,
+    point: formData.point,
+    purchaseDate: formData.purchaseDate,
+    purchaseLocation: formData.purchaseLocation,
+    salePrice: formData.salePrice,
+    saleLocation: formData.saleLocation,
+    saleDate: formData.saleDate,
+  }) !== JSON.stringify({
+    productName: product.productName,
+    quantityTotal: String(product.quantityTotal || 1),
+    quantityAvailable: String(product.quantityAvailable || product.quantityTotal || 1),
+    channel: (product.channel === 'kaitori' ? 'kaitori' : 'ebay') as 'ebay' | 'kaitori',
+    purchasePrice: String(product.purchasePrice),
+    purchasePointUsed: String(product.purchasePointUsed || 0),
+    point: String(product.point),
+    purchaseDate: product.purchaseDate,
+    purchaseLocation: product.purchaseLocation,
+    salePrice: product.salePrice ? String(product.salePrice) : '',
+    saleLocation: product.saleLocation || '',
+    saleDate: product.saleDate || '',
+  });
+
+  useEffect(() => {
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isDirty]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +132,13 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
       }
 
       await updateProductData(product.id, updates);
+      try {
+        const current = JSON.parse(localStorage.getItem('purchaseLocationRecent') || '[]') as string[];
+        const next = Array.from(new Set([formData.purchaseLocation, ...current])).slice(0, 10);
+        localStorage.setItem('purchaseLocationRecent', JSON.stringify(next));
+      } catch {
+        // noop
+      }
       onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '更新に失敗しました');
@@ -112,7 +169,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
             >
               {showChannelField ? '販路変更を閉じる' : '販路を変更する'}
             </button>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+            <button onClick={() => (isDirty ? setShowLeaveConfirm(true) : onClose?.())} className="p-2 rounded-lg hover:bg-slate-100">
               <X className="w-5 h-5 text-slate-600" />
             </button>
           </div>
@@ -377,7 +434,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
 
           {error && <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+          <div className="sticky bottom-0 bg-white/95 backdrop-blur py-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
             <button
               type="button"
               onClick={handleDelete}
@@ -395,6 +452,17 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
           </div>
         </form>
       </div>
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-4 w-full max-w-sm space-y-3">
+            <p className="text-sm font-semibold text-slate-900">未保存の変更があります。閉じますか？</p>
+            <div className="flex justify-end gap-2">
+              <button className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700" onClick={() => setShowLeaveConfirm(false)}>戻る</button>
+              <button className="px-3 py-2 rounded-lg bg-rose-600 text-white" onClick={() => onClose?.()}>破棄して閉じる</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

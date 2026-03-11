@@ -36,6 +36,7 @@ function App() {
     kaitori: 'list',
   });
   const [periodFilter, setPeriodFilter] = useState<'thisMonth' | 'lastMonth' | 'thisYear' | 'all'>('thisMonth');
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const isKaitori = activeSystem === 'kaitori';
   const currentScreen = screenBySystem[activeSystem];
@@ -105,6 +106,12 @@ function App() {
       productIds: ids,
       affectedCount: ids.length,
     });
+  };
+
+  const changePeriodFilter = (value: 'thisMonth' | 'lastMonth' | 'thisYear' | 'all') => {
+    setDashboardLoading(true);
+    setPeriodFilter(value);
+    window.setTimeout(() => setDashboardLoading(false), 250);
   };
 
   return (
@@ -181,7 +188,7 @@ function App() {
               <div className="mb-4">
                 <div className="glass-panel p-2 inline-flex gap-1">
                   <button
-                    onClick={() => setPeriodFilter('thisMonth')}
+                    onClick={() => changePeriodFilter('thisMonth')}
                     className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                       periodFilter === 'thisMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                     }`}
@@ -189,7 +196,7 @@ function App() {
                     今月
                   </button>
                   <button
-                    onClick={() => setPeriodFilter('lastMonth')}
+                    onClick={() => changePeriodFilter('lastMonth')}
                     className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                       periodFilter === 'lastMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                     }`}
@@ -197,7 +204,7 @@ function App() {
                     先月
                   </button>
                   <button
-                    onClick={() => setPeriodFilter('thisYear')}
+                    onClick={() => changePeriodFilter('thisYear')}
                     className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                       periodFilter === 'thisYear' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                     }`}
@@ -205,7 +212,7 @@ function App() {
                     今年
                   </button>
                   <button
-                    onClick={() => setPeriodFilter('all')}
+                    onClick={() => changePeriodFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                       periodFilter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                     }`}
@@ -214,7 +221,19 @@ function App() {
                   </button>
                 </div>
               </div>
-              <Dashboard products={summaryProducts} showMoM={periodFilter !== 'all'} />
+              {dashboardLoading ? (
+                <div className="glass-panel p-5 space-y-3">
+                  <div className="h-5 w-32 rounded bg-slate-200 animate-pulse" />
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="h-24 rounded-xl bg-slate-100 animate-pulse" />
+                    ))}
+                  </div>
+                  <div className="h-48 rounded-xl bg-slate-100 animate-pulse" />
+                </div>
+              ) : (
+                <Dashboard products={summaryProducts} showMoM={periodFilter !== 'all'} />
+              )}
             </section>
           ) : screen === 'list' ? (
             <section>
