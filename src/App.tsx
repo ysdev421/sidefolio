@@ -10,15 +10,16 @@ import { ProductList } from '@/components/ProductList';
 import { AddProductForm } from '@/components/AddProductForm';
 import { SaleBatchManager } from '@/components/SaleBatchManager';
 import { PurchaseLocationMaster } from '@/components/PurchaseLocationMaster';
+import { StatusBatchManager } from '@/components/StatusBatchManager';
 
 type Screen = 'summary' | 'list' | 'sale';
 type SystemType = 'ebay' | 'kaitori';
-type AppView = 'system' | 'purchaseLocationMaster';
+type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager';
 
 function App() {
   const { authLoading } = useAuth();
   const user = useStore((state) => state.user);
-  const { products, deleteProductData } = useProducts(user?.id || null);
+  const { products, deleteProductData, updateProductData } = useProducts(user?.id || null);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSystemMenu, setShowSystemMenu] = useState(false);
@@ -91,6 +92,10 @@ function App() {
     }
   };
 
+  const bulkUpdateStatus = async (ids: string[], status: 'pending' | 'inventory') => {
+    await Promise.all(ids.map((id) => updateProductData(id, { status })));
+  };
+
   return (
     <div className="min-h-screen">
       <Header userName={user.displayName || user.email} />
@@ -136,6 +141,17 @@ function App() {
               >
                 購入場所マスタ管理
               </button>
+              <button
+                onClick={() => {
+                  setAppView('statusBatchManager');
+                  setShowSystemMenu(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  appView === 'statusBatchManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                }`}
+              >
+                ステータス一括管理
+              </button>
             </div>
           )}
         </section>
@@ -146,6 +162,8 @@ function App() {
 
         {appView === 'purchaseLocationMaster' ? (
           <PurchaseLocationMaster userId={user.id} />
+        ) : appView === 'statusBatchManager' ? (
+          <StatusBatchManager products={filteredProducts} onBulkUpdate={bulkUpdateStatus} />
         ) : screen === 'summary' ? (
           <section>
             <div className="mb-4">
@@ -208,14 +226,14 @@ function App() {
         onClick={() => setShowAddForm(true)}
         className="fixed right-4 bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-8 sm:right-8 z-30 bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-600 text-white rounded-2xl p-4 shadow-2xl transition hover:scale-105 active:scale-95 flex items-center justify-center"
         title={`${activeSystem === 'ebay' ? 'eBay' : '買取'}の商品を追加`}
-        style={{ display: appView === 'purchaseLocationMaster' ? 'none' : undefined }}
+        style={{ display: appView === 'system' ? undefined : 'none' }}
       >
         <Plus className="w-7 h-7" />
       </button>
 
       <nav
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-md"
-        style={{ display: appView === 'purchaseLocationMaster' ? 'none' : undefined }}
+        style={{ display: appView === 'system' ? undefined : 'none' }}
       >
         <div className="glass-panel p-1.5 flex items-center gap-1 flex-nowrap">
           <button
