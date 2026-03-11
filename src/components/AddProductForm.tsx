@@ -296,15 +296,48 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">数量 *</label>
-              <input
-                type="number"
-                min={1}
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                required
-                className="input-field"
-                placeholder="1"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      quantity: String(Math.max(1, (parseInt(prev.quantity, 10) || 1) - 1)),
+                    }))
+                  }
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                  title="数量を減らす"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={formData.quantity}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      quantity: String(Math.max(1, parseInt(e.target.value || '1', 10) || 1)),
+                    })
+                  }
+                  required
+                  className="input-field text-center"
+                  placeholder="1"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      quantity: String(Math.max(1, (parseInt(prev.quantity, 10) || 1) + 1)),
+                    }))
+                  }
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                  title="数量を増やす"
+                >
+                  +
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">購入価格 *</label>
