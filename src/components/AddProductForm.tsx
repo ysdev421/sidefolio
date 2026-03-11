@@ -23,6 +23,7 @@ const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
 export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockChannel = false }: AddProductFormProps) {
   const lookupSeqRef = useRef(0);
+  const isKaitori = defaultChannel === 'kaitori';
   const [formData, setFormData] = useState({
     janCode: '',
     productName: '',
@@ -177,13 +178,25 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
     setError('');
 
     try {
+      const normalizedJan = normalizeJanCode(formData.janCode);
+      if (isKaitori) {
+        if (!normalizedJan) {
+          setError('買取流しはJANコード必須です');
+          return;
+        }
+        if (!formData.productName.trim()) {
+          setError('JANから商品名を特定できません。別のJANで試してください');
+          return;
+        }
+      }
+
       const qty = Math.max(1, parseInt(formData.quantity, 10) || 1);
       const purchasePrice = parseFloat(formData.purchasePrice);
       const purchasePointUsed = parseFloat(formData.purchasePointUsed) || 0;
       const point = parseFloat(formData.point) || 0;
 
       await createProduct({
-        janCode: formData.janCode.trim() || undefined,
+        janCode: normalizedJan || undefined,
         productName: formData.productName,
         quantityTotal: qty,
         quantityAvailable: qty,
@@ -197,7 +210,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
       });
 
       await upsertProductTemplate(userId, {
-        janCode: formData.janCode.trim() || undefined,
+        janCode: normalizedJan || undefined,
         productName: formData.productName,
         purchaseLocation: formData.purchaseLocation,
         channel: formData.channel,
@@ -207,7 +220,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
       });
 
       await upsertJanMaster({
-        janCode: formData.janCode.trim() || undefined,
+        janCode: normalizedJan || undefined,
         productName: formData.productName,
       });
 
@@ -240,39 +253,42 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">JAN</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formData.janCode}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData((prev) => ({ ...prev, janCode: value }));
-                }}
-                onBlur={() => fillProductNameByJan(formData.janCode)}
-                className="input-field"
-                placeholder="例: 4901234567890"
-                inputMode="numeric"
-              />
-              {mobileCameraEnabled && (
-                <button
-                  type="button"
-                  onClick={() => setShowScanner(true)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap"
-                  title="カメラで読み取り"
-                >
-                  <Camera className="w-4 h-4" />
-                  読取
-                </button>
+          {isKaitori && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">JAN *</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formData.janCode}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData((prev) => ({ ...prev, janCode: value }));
+                  }}
+                  onBlur={() => fillProductNameByJan(formData.janCode)}
+                  className="input-field"
+                  placeholder="例: 4901234567890"
+                  inputMode="numeric"
+                  required
+                />
+                {mobileCameraEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                    title="カメラで読み取り"
+                  >
+                    <Camera className="w-4 h-4" />
+                    読取
+                  </button>
+                )}
+              </div>
+              {(janHint || janLookupLoading) && (
+                <p className={`mt-1 text-xs ${janLookupLoading ? 'text-slate-500' : 'text-slate-600'}`}>
+                  {janLookupLoading ? 'JANを照会中...' : janHint}
+                </p>
               )}
             </div>
-            {(janHint || janLookupLoading) && (
-              <p className={`mt-1 text-xs ${janLookupLoading ? 'text-slate-500' : 'text-slate-600'}`}>
-                {janLookupLoading ? 'JANを照会中...' : janHint}
-              </p>
-            )}
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">商品名 *</label>
@@ -280,6 +296,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               type="text"
               value={formData.productName}
               onChange={(e) => {
+                if (isKaitori) return;
                 const value = e.target.value;
                 setFormData({ ...formData, productName: value });
                 const matched = templates.find((t) => t.productName === value.trim());
@@ -287,9 +304,10 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               }}
               required
               className="input-field"
-              placeholder="例: チェキフィルム"
+              placeholder={isKaitori ? 'JANから自動入力' : '例: チェキフィルム'}
+              readOnly={isKaitori}
             />
-            {candidateTemplates.length > 0 && (
+            {!isKaitori && candidateTemplates.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {candidateTemplates.map((t) => (
                   <button
