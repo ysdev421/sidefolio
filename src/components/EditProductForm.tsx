@@ -166,6 +166,21 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 </div>
               </div>
 
+              <div className="glass-panel p-3 text-sm">
+                <p className="text-slate-700">
+                  実質原価:
+                  <span className="ml-2 font-bold text-slate-900">
+                    {(() => {
+                      const purchase = parseFloat(formData.purchasePrice) || 0;
+                      const used = parseFloat(formData.purchasePointUsed) || 0;
+                      const earned = parseFloat(formData.point) || 0;
+                      return `${purchase + used - earned} 円`;
+                    })()}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-500 mt-1">購入価格 + 支払いP利用 - 付与ポイント</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">購入日</label>
