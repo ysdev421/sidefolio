@@ -5,6 +5,7 @@
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   setDoc,
   Timestamp,
@@ -183,13 +184,25 @@ export async function getJanMasterByCode(
 
   const ref = doc(db, 'jan_master', normalized);
   const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  const data = snap.data() as any;
-  if (!data?.productName) return null;
+  if (snap.exists()) {
+    const data = snap.data() as any;
+    if (data?.productName) {
+      return {
+        janCode: normalized,
+        productName: String(data.productName),
+      };
+    }
+  }
+
+  const q = query(collection(db, 'jan_master'), where('janCode', '==', normalized), limit(1));
+  const rows = await getDocs(q);
+  if (rows.empty) return null;
+  const row = rows.docs[0].data() as any;
+  if (!row?.productName) return null;
 
   return {
     janCode: normalized,
-    productName: String(data.productName),
+    productName: String(row.productName),
   };
 }
 
