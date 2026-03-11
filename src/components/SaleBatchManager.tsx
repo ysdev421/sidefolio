@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { Box, CheckCircle2, PlusCircle, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import { buildProductUpdateForBatchConfirm } from '@/lib/saleBatch';
 import type { Product } from '@/types';
 
 interface SaleBatchManagerProps {
@@ -206,23 +207,18 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         if (!pSnap.exists()) continue;
         const pData: any = pSnap.data();
 
-        const available = Number(pData.quantityAvailable ?? pData.quantityTotal ?? 1);
-        const nextAvailable = Math.max(0, available - item.quantity);
-
-        const updates: any = {
-          quantityAvailable: nextAvailable,
-          quantityTotal: Number(pData.quantityTotal ?? available),
-          updatedAt: now,
-        };
-
-        if (nextAvailable === 0) {
-          updates.status = 'sold';
-          updates.salePrice = finalPrice;
-          updates.saleLocation = confirmTarget.buyer;
-          updates.saleDate = today;
-        } else if (pData.status === 'pending') {
-          updates.status = 'inventory';
-        }
+        const updates = buildProductUpdateForBatchConfirm({
+          product: {
+            quantityAvailable: pData.quantityAvailable,
+            quantityTotal: pData.quantityTotal,
+            status: pData.status,
+          },
+          soldQuantity: item.quantity,
+          finalPrice,
+          buyer: confirmTarget.buyer,
+          today,
+          now,
+        });
 
         b.update(pRef, updates);
       }

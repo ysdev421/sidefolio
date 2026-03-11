@@ -1,7 +1,8 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Loader, Save, Trash2, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
+import { getUserPurchaseLocations } from '@/lib/firestore';
 import type { Product } from '@/types';
 
 interface EditProductFormProps {
@@ -16,6 +17,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   const loading = useStore((state) => state.loading);
   const [showChannelField, setShowChannelField] = useState(false);
   const [showCostDetails, setShowCostDetails] = useState(false);
+  const [purchaseLocations, setPurchaseLocations] = useState<string[]>(['メルカリ']);
 
   const [formData, setFormData] = useState({
     productName: product.productName,
@@ -32,6 +34,25 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     saleDate: product.saleDate || '',
   });
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const rows = await getUserPurchaseLocations(userId);
+        setPurchaseLocations(rows.length > 0 ? rows : ['メルカリ']);
+        setFormData((prev) => ({
+          ...prev,
+          purchaseLocation:
+            prev.purchaseLocation && rows.includes(prev.purchaseLocation)
+              ? prev.purchaseLocation
+              : rows[0] || 'メルカリ',
+        }));
+      } catch {
+        setPurchaseLocations(['メルカリ']);
+      }
+    };
+    loadLocations();
+  }, [userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,12 +326,17 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
           {!showChannelField && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">購入場所</label>
-              <input
-                type="text"
+              <select
                 value={formData.purchaseLocation}
                 onChange={(e) => setFormData({ ...formData, purchaseLocation: e.target.value })}
                 className="input-field"
-              />
+              >
+                {purchaseLocations.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -372,3 +398,4 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     </div>
   );
 }
+

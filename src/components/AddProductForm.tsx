@@ -212,6 +212,10 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
     try {
       const normalizedJan = normalizeJanCode(formData.janCode);
       if (isKaitori) {
+        if (!normalizedJan) {
+          setError('買取流しはJANコード必須です。JAN検索またはカメラ読取で選択してください');
+          return;
+        }
         if (!formData.productName.trim()) {
           setError('買取流しは商品名またはJANで候補を選択してください');
           return;

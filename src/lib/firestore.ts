@@ -245,3 +245,33 @@ export async function upsertUserPurchaseLocations(userId: string, locations: str
     { merge: true }
   );
 }
+
+export async function getPurchaseLocationUsageCounts(userId: string): Promise<Record<string, number>> {
+  const q = query(collection(db, 'products'), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  const counts: Record<string, number> = {};
+  snap.docs.forEach((d: any) => {
+    const data = d.data() as any;
+    const location = typeof data.purchaseLocation === 'string' ? data.purchaseLocation.trim() : '';
+    if (!location) return;
+    counts[location] = (counts[location] || 0) + 1;
+  });
+  return counts;
+}
+
+export async function addStatusBatchLogToFirestore(
+  userId: string,
+  payload: {
+    targetStatus: 'pending' | 'inventory';
+    productIds: string[];
+    affectedCount: number;
+  }
+): Promise<void> {
+  await addDoc(collection(db, 'status_batch_logs'), {
+    userId,
+    targetStatus: payload.targetStatus,
+    productIds: payload.productIds,
+    affectedCount: payload.affectedCount,
+    createdAt: Timestamp.now(),
+  });
+}

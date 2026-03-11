@@ -17,4 +17,15 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          zxing: ['@zxing/browser', '@zxing/library'],
+        },
+      },
+    },
+  },
 })

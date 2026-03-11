@@ -1,16 +1,22 @@
-﻿import { useState } from 'react';
+﻿import { Suspense, lazy, useState } from 'react';
 import { BarChart3, ChevronDown, List, Menu, Plus, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
 import { LoginForm } from '@/components/LoginForm';
 import { Header } from '@/components/Header';
-import { Dashboard } from '@/components/Dashboard';
-import { ProductList } from '@/components/ProductList';
-import { AddProductForm } from '@/components/AddProductForm';
-import { SaleBatchManager } from '@/components/SaleBatchManager';
-import { PurchaseLocationMaster } from '@/components/PurchaseLocationMaster';
-import { StatusBatchManager } from '@/components/StatusBatchManager';
+import { addStatusBatchLogToFirestore } from '@/lib/firestore';
+
+const Dashboard = lazy(() => import('@/components/Dashboard').then((m) => ({ default: m.Dashboard })));
+const ProductList = lazy(() => import('@/components/ProductList').then((m) => ({ default: m.ProductList })));
+const AddProductForm = lazy(() => import('@/components/AddProductForm').then((m) => ({ default: m.AddProductForm })));
+const SaleBatchManager = lazy(() => import('@/components/SaleBatchManager').then((m) => ({ default: m.SaleBatchManager })));
+const PurchaseLocationMaster = lazy(() =>
+  import('@/components/PurchaseLocationMaster').then((m) => ({ default: m.PurchaseLocationMaster }))
+);
+const StatusBatchManager = lazy(() =>
+  import('@/components/StatusBatchManager').then((m) => ({ default: m.StatusBatchManager }))
+);
 
 type Screen = 'summary' | 'list' | 'sale';
 type SystemType = 'ebay' | 'kaitori';
@@ -94,6 +100,11 @@ function App() {
 
   const bulkUpdateStatus = async (ids: string[], status: 'pending' | 'inventory') => {
     await Promise.all(ids.map((id) => updateProductData(id, { status })));
+    await addStatusBatchLogToFirestore(user.id, {
+      targetStatus: status,
+      productIds: ids,
+      affectedCount: ids.length,
+    });
   };
 
   return (
@@ -160,59 +171,61 @@ function App() {
           <div className="text-xs text-soft font-semibold tracking-wide">現在: {activeSystem === 'ebay' ? 'eBay' : '買取流し'}</div>
         </section>
 
-        {appView === 'purchaseLocationMaster' ? (
-          <PurchaseLocationMaster userId={user.id} />
-        ) : appView === 'statusBatchManager' ? (
-          <StatusBatchManager products={filteredProducts} onBulkUpdate={bulkUpdateStatus} />
-        ) : screen === 'summary' ? (
-          <section>
-            <div className="mb-4">
-              <div className="glass-panel p-2 inline-flex gap-1">
-                <button
-                  onClick={() => setPeriodFilter('thisMonth')}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
-                    periodFilter === 'thisMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                  }`}
-                >
-                  今月
-                </button>
-                <button
-                  onClick={() => setPeriodFilter('lastMonth')}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
-                    periodFilter === 'lastMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                  }`}
-                >
-                  先月
-                </button>
-                <button
-                  onClick={() => setPeriodFilter('thisYear')}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
-                    periodFilter === 'thisYear' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                  }`}
-                >
-                  今年
-                </button>
-                <button
-                  onClick={() => setPeriodFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
-                    periodFilter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                  }`}
-                >
-                  全期間
-                </button>
+        <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-600">読み込み中...</div>}>
+          {appView === 'purchaseLocationMaster' ? (
+            <PurchaseLocationMaster userId={user.id} />
+          ) : appView === 'statusBatchManager' ? (
+            <StatusBatchManager products={filteredProducts} onBulkUpdate={bulkUpdateStatus} />
+          ) : screen === 'summary' ? (
+            <section>
+              <div className="mb-4">
+                <div className="glass-panel p-2 inline-flex gap-1">
+                  <button
+                    onClick={() => setPeriodFilter('thisMonth')}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
+                      periodFilter === 'thisMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                    }`}
+                  >
+                    今月
+                  </button>
+                  <button
+                    onClick={() => setPeriodFilter('lastMonth')}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
+                      periodFilter === 'lastMonth' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                    }`}
+                  >
+                    先月
+                  </button>
+                  <button
+                    onClick={() => setPeriodFilter('thisYear')}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
+                      periodFilter === 'thisYear' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                    }`}
+                  >
+                    今年
+                  </button>
+                  <button
+                    onClick={() => setPeriodFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
+                      periodFilter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                    }`}
+                  >
+                    全期間
+                  </button>
+                </div>
               </div>
-            </div>
-            <Dashboard products={summaryProducts} showMoM={periodFilter !== 'all'} />
-          </section>
-        ) : screen === 'list' ? (
-          <section>
-            <ProductList products={filteredProducts} userId={user.id} onDelete={deleteProductData} />
-          </section>
-        ) : (
-          <section>
-            <SaleBatchManager products={filteredProducts} userId={user.id} />
-          </section>
-        )}
+              <Dashboard products={summaryProducts} showMoM={periodFilter !== 'all'} />
+            </section>
+          ) : screen === 'list' ? (
+            <section>
+              <ProductList products={filteredProducts} userId={user.id} onDelete={deleteProductData} />
+            </section>
+          ) : (
+            <section>
+              <SaleBatchManager products={filteredProducts} userId={user.id} />
+            </section>
+          )}
+        </Suspense>
 
         {screen !== 'sale' && filteredProducts.length === 0 && (
           <div className="glass-panel text-center py-10 mt-8">
@@ -269,7 +282,9 @@ function App() {
       </nav>
 
       {showAddForm && (
-        <AddProductForm userId={user.id} defaultChannel={activeSystem} lockChannel onClose={() => setShowAddForm(false)} />
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/30" />}>
+          <AddProductForm userId={user.id} defaultChannel={activeSystem} lockChannel onClose={() => setShowAddForm(false)} />
+        </Suspense>
       )}
     </div>
   );
