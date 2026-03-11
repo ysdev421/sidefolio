@@ -117,23 +117,89 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">総数量</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={formData.quantityTotal}
-                    onChange={(e) => setFormData({ ...formData, quantityTotal: e.target.value })}
-                    className="input-field"
-                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          quantityTotal: String(Math.max(1, (parseInt(prev.quantityTotal, 10) || 1) - 1)),
+                        }))
+                      }
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                      title="総数量を減らす"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      value={formData.quantityTotal}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          quantityTotal: String(Math.max(1, parseInt(e.target.value || '1', 10) || 1)),
+                        })
+                      }
+                      className="input-field text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          quantityTotal: String(Math.max(1, (parseInt(prev.quantityTotal, 10) || 1) + 1)),
+                        }))
+                      }
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                      title="総数量を増やす"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">残数</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.quantityAvailable}
-                    onChange={(e) => setFormData({ ...formData, quantityAvailable: e.target.value })}
-                    className="input-field"
-                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          quantityAvailable: String(Math.max(0, (parseInt(prev.quantityAvailable, 10) || 0) - 1)),
+                        }))
+                      }
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                      title="残数を減らす"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.quantityAvailable}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          quantityAvailable: String(Math.max(0, parseInt(e.target.value || '0', 10) || 0)),
+                        })
+                      }
+                      className="input-field text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          quantityAvailable: String(Math.max(0, (parseInt(prev.quantityAvailable, 10) || 0) + 1)),
+                        }))
+                      }
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                      title="残数を増やす"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
