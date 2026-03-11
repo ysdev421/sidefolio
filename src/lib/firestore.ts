@@ -241,6 +241,30 @@ export async function getUserJanUsageByCode(
   };
 }
 
+export async function getUserProductNameByJanFromProducts(
+  userId: string,
+  janCode: string
+): Promise<{ janCode: string; productName: string } | null> {
+  const normalized = normalizeJanCode(janCode);
+  if (!userId || !normalized) return null;
+
+  const q = query(
+    collection(db, 'products'),
+    where('userId', '==', userId),
+    where('janCode', '==', normalized),
+    limit(1)
+  );
+  const rows = await getDocs(q);
+  if (rows.empty) return null;
+  const row = rows.docs[0].data() as any;
+  if (!row?.productName) return null;
+
+  return {
+    janCode: normalized,
+    productName: String(row.productName),
+  };
+}
+
 export async function upsertUserJanUsage(
   userId: string,
   data: { janCode?: string; productName: string; channel?: Product['channel'] }

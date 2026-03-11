@@ -3,6 +3,7 @@ import { Camera, Loader, Plus, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import {
   getJanMasterByCode,
+  getUserProductNameByJanFromProducts,
   getUserJanUsageByCode,
   getUserPurchaseLocations,
   getUserProductTemplates,
@@ -147,6 +148,14 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
       if (userUsage?.productName) {
         setFormData((prev) => ({ ...prev, janCode, productName: userUsage.productName }));
         setJanHint('あなたの利用履歴から商品名を補完しました');
+        return;
+      }
+
+      const fromProducts = await getUserProductNameByJanFromProducts(userId, janCode);
+      if (seq !== lookupSeqRef.current) return;
+      if (fromProducts?.productName) {
+        setFormData((prev) => ({ ...prev, janCode, productName: fromProducts.productName }));
+        setJanHint('既存の商品データから商品名を補完しました');
         return;
       }
 
