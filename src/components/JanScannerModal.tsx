@@ -68,23 +68,26 @@ export function JanScannerModal({ onClose, onDetected }: JanScannerModalProps) {
   }, [onDetected]);
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-slate-900 inline-flex items-center gap-2">
-            <Camera className="w-5 h-5 text-sky-600" />
-            JAN Scanner
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 transition">
-            <X className="w-4 h-4 text-slate-600" />
-          </button>
+    <div className="fixed inset-0 z-[60] bg-black/70">
+      <div className="relative w-full h-[100dvh] bg-black overflow-hidden">
+        <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+
+        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-white inline-flex items-center gap-2">
+              <Camera className="w-5 h-5 text-cyan-300" />
+              JAN Scanner
+            </h3>
+            <button onClick={onClose} className="p-2 rounded-lg bg-white/15 hover:bg-white/25 transition">
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
         </div>
 
-        <video ref={videoRef} className="w-full aspect-video rounded-xl bg-slate-900" muted playsInline />
-
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-
-        <p className="text-xs text-slate-500">Align barcode in frame to fill JAN automatically.</p>
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/75 to-transparent">
+          {error && <p className="text-sm text-rose-300">{error}</p>}
+          <p className="text-xs text-slate-200">Align barcode in frame to fill JAN automatically.</p>
+        </div>
       </div>
     </div>
   );
