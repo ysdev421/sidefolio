@@ -312,11 +312,6 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="glass-panel p-3">
-            <p className="text-xs font-semibold text-slate-700">
-              必須入力: {isKaitori ? 'JAN検索(またはカメラ)・商品名確定・数量・購入金額' : '商品名・数量・購入金額'}
-            </p>
-          </div>
           {isKaitori && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
