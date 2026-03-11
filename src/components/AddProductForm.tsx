@@ -448,7 +448,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">購入価格 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">購入金額合計 *</label>
               <input
                 type="number"
                 value={formData.purchasePrice}
@@ -518,7 +518,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               </span>
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              購入価格 + 支払いP利用 + クーポン値引き + 獲得P今すぐ利用 - 付与ポイント
+              購入金額合計 + 支払いP利用 + クーポン値引き + 獲得P今すぐ利用 - 付与ポイント
             </p>
           </div>
 

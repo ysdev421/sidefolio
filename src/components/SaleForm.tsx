@@ -65,7 +65,7 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-gray-700">
           <p>
-            <span className="font-medium">購入価格:</span> {formatCurrency(product.purchasePrice)}
+            <span className="font-medium">購入金額合計:</span> {formatCurrency(product.purchasePrice)}
           </p>
           {(product.purchasePointUsed || 0) > 0 && (
             <p>
