@@ -301,8 +301,8 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
-      <div className="w-full bg-white rounded-t-2xl p-6 animate-slide-in mt-12">
+    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto" onClick={() => onClose?.()}>
+      <div className="w-full bg-white rounded-t-2xl p-6 animate-slide-in mt-12" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">商品を追加</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
