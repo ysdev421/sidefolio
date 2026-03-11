@@ -310,19 +310,6 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">販路</label>
-            <select
-              value={formData.channel}
-              onChange={(e) => setFormData({ ...formData, channel: e.target.value as 'ebay' | 'kaitori' })}
-              className="input-field"
-              disabled={lockChannel}
-            >
-              <option value="ebay">eBay</option>
-              <option value="kaitori">買取流し</option>
-            </select>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">購入日</label>
             <input
               type="date"
