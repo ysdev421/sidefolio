@@ -176,6 +176,9 @@ export async function getUserProductTemplates(userId: string): Promise<ProductTe
 }
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
+const KAITORI_JAN_FALLBACKS: Record<string, string> = {
+  '4902370553024': 'Nintendo Switch 2 日本語・国内専用',
+};
 
 async function findByNormalizedJanInCollection(
   collectionName: 'jan_master' | 'products',
@@ -304,7 +307,15 @@ export async function getJanMasterByCode(
     }
   }
 
-  return findByNormalizedJanInCollection('jan_master', normalized);
+  const scanned = await findByNormalizedJanInCollection('jan_master', normalized);
+  if (scanned) return scanned;
+
+  const fallbackName = KAITORI_JAN_FALLBACKS[normalized];
+  if (fallbackName) {
+    return { janCode: normalized, productName: fallbackName };
+  }
+
+  return null;
 }
 
 export async function upsertJanMaster(data: { janCode?: string; productName: string }): Promise<void> {
