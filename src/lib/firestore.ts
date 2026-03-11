@@ -105,6 +105,7 @@ export async function upsertProductTemplate(
     purchasePrice?: number;
     purchasePointUsed?: number;
     couponDiscount?: number;
+    instantPointUse?: number;
     point?: number;
   }
 ): Promise<void> {
@@ -129,6 +130,7 @@ export async function upsertProductTemplate(
       lastPurchasePrice: data.purchasePrice ?? null,
       lastPurchasePointUsed: data.purchasePointUsed ?? null,
       lastCouponDiscount: data.couponDiscount ?? null,
+      lastInstantPointUse: data.instantPointUse ?? null,
       lastPoint: data.point ?? null,
       usedCount: currentUsedCount + 1,
       createdAt: snap.exists() ? snap.data().createdAt : now,
@@ -156,6 +158,7 @@ export async function getUserProductTemplates(userId: string): Promise<ProductTe
       lastPurchasePointUsed:
         typeof data.lastPurchasePointUsed === 'number' ? data.lastPurchasePointUsed : undefined,
       lastCouponDiscount: typeof data.lastCouponDiscount === 'number' ? data.lastCouponDiscount : undefined,
+      lastInstantPointUse: typeof data.lastInstantPointUse === 'number' ? data.lastInstantPointUse : undefined,
       lastPoint: typeof data.lastPoint === 'number' ? data.lastPoint : undefined,
       usedCount: Number(data.usedCount || 0),
       createdAt: toIso(data.createdAt),

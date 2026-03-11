@@ -77,6 +77,11 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
               <span className="font-medium">クーポン値引き:</span> -{formatCurrency(product.couponDiscount || 0)}
             </p>
           )}
+          {(product.instantPointUse || 0) > 0 && (
+            <p>
+              <span className="font-medium">獲得P今すぐ利用:</span> -{formatCurrency(product.instantPointUse || 0)}
+            </p>
+          )}
           {product.point > 0 && (
             <p>
               <span className="font-medium">付与ポイント:</span> -{formatCurrency(product.point)}

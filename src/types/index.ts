@@ -9,6 +9,7 @@ export interface Product {
   purchasePrice: number;
   purchasePointUsed?: number;
   couponDiscount?: number;
+  instantPointUse?: number;
   point: number;
   purchaseDate: string;
   purchaseLocation: string;
@@ -30,6 +31,7 @@ export interface ProductTemplate {
   lastPurchasePrice?: number;
   lastPurchasePointUsed?: number;
   lastCouponDiscount?: number;
+  lastInstantPointUse?: number;
   lastPoint?: number;
   usedCount: number;
   createdAt: string;

@@ -24,6 +24,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     purchasePrice: String(product.purchasePrice),
     purchasePointUsed: String(product.purchasePointUsed || 0),
     couponDiscount: String(product.couponDiscount || 0),
+    instantPointUse: String(product.instantPointUse || 0),
     point: String(product.point),
     purchaseDate: product.purchaseDate,
     purchaseLocation: product.purchaseLocation,
@@ -47,6 +48,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
         purchasePointUsed: parseFloat(formData.purchasePointUsed) || 0,
         couponDiscount: parseFloat(formData.couponDiscount) || 0,
+        instantPointUse: parseFloat(formData.instantPointUse) || 0,
         point: parseFloat(formData.point) || 0,
         purchaseDate: formData.purchaseDate,
         purchaseLocation: formData.purchaseLocation,
@@ -203,7 +205,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">購入価格</label>
                   <input
@@ -233,6 +235,15 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">獲得P今すぐ利用</label>
+                  <input
+                    type="number"
+                    value={formData.instantPointUse}
+                    onChange={(e) => setFormData({ ...formData, instantPointUse: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">付与ポイント</label>
                   <input
                     type="number"
@@ -251,12 +262,15 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                       const purchase = parseFloat(formData.purchasePrice) || 0;
                       const used = parseFloat(formData.purchasePointUsed) || 0;
                       const coupon = parseFloat(formData.couponDiscount) || 0;
+                      const instant = parseFloat(formData.instantPointUse) || 0;
                       const earned = parseFloat(formData.point) || 0;
-                      return `${purchase + used - coupon - earned} 円`;
+                      return `${purchase + used - coupon - instant - earned} 円`;
                     })()}
                   </span>
                 </p>
-                <p className="text-xs text-slate-500 mt-1">購入価格 + 支払いP利用 - クーポン値引き - 付与ポイント</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  購入価格 + 支払いP利用 - クーポン値引き - 獲得P今すぐ利用 - 付与ポイント
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

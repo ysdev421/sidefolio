@@ -38,6 +38,7 @@ interface SaleBatchItem {
   purchasePrice: number;
   purchasePointUsed?: number;
   couponDiscount?: number;
+  instantPointUse?: number;
   point: number;
 }
 
@@ -136,6 +137,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           purchasePrice: product.purchasePrice,
           purchasePointUsed: product.purchasePointUsed || 0,
           couponDiscount: product.couponDiscount || 0,
+          instantPointUse: product.instantPointUse || 0,
           point: product.point,
           status: 'in_progress',
           createdAt: now,
@@ -170,12 +172,13 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         purchasePrice: Number(i.purchasePrice || 0),
         purchasePointUsed: Number(i.purchasePointUsed || 0),
         couponDiscount: Number(i.couponDiscount || 0),
+        instantPointUse: Number(i.instantPointUse || 0),
         point: Number(i.point || 0),
       }));
 
     const init: Record<string, string> = {};
     for (const i of items) {
-      const unitCost = Math.max(0, i.purchasePrice + (i.purchasePointUsed || 0) - (i.couponDiscount || 0) - i.point);
+      const unitCost = Math.max(0, i.purchasePrice + (i.purchasePointUsed || 0) - (i.couponDiscount || 0) - (i.instantPointUse || 0) - i.point);
       init[i.id] = String(unitCost * i.quantity);
     }
 

@@ -1,7 +1,12 @@
 ﻿import type { Product, ProfitSummary } from '@/types';
 
 export function getPurchaseBaseCost(product: Product): number {
-  return product.purchasePrice + (product.purchasePointUsed || 0) - (product.couponDiscount || 0);
+  return (
+    product.purchasePrice +
+    (product.purchasePointUsed || 0) -
+    (product.couponDiscount || 0) -
+    (product.instantPointUse || 0)
+  );
 }
 
 export function getEffectiveCost(product: Product): number {
