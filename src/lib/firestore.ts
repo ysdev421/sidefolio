@@ -293,13 +293,30 @@ export async function getUserProductNameByJanFromProducts(
     limit(1)
   );
   const rowsNum = await getDocs(qNum);
-  if (rowsNum.empty) return null;
-  const rowNum = rowsNum.docs[0].data() as any;
-  if (!rowNum?.productName) return null;
+  if (!rowsNum.empty) {
+    const rowNum = rowsNum.docs[0].data() as any;
+    if (rowNum?.productName) {
+      return {
+        janCode: normalized,
+        productName: String(rowNum.productName),
+      };
+    }
+  }
 
+  // Legacy fallback: scan user's recent products and compare with normalized JAN.
+  const qUser = query(collection(db, 'products'), where('userId', '==', userId), limit(500));
+  const userRows = await getDocs(qUser);
+  const found = userRows.docs.find((d: any) => {
+    const data = d.data() as any;
+    const raw = typeof data?.janCode === 'number' ? String(data.janCode) : String(data?.janCode || '');
+    return normalizeJanCode(raw) === normalized;
+  });
+  if (!found) return null;
+  const foundData = found.data() as any;
+  if (!foundData?.productName) return null;
   return {
     janCode: normalized,
-    productName: String(rowNum.productName),
+    productName: String(foundData.productName),
   };
 }
 
