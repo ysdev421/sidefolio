@@ -2,7 +2,7 @@
 import { CircleDollarSign, Edit, Search, SlidersHorizontal } from 'lucide-react';
 import { SaleForm } from './SaleForm';
 import { EditProductForm } from './EditProductForm';
-import { calculatePointProfit, calculateProfit, formatCurrency, formatDate } from '@/lib/utils';
+import { calculatePointProfit, calculateProfit, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface ProductListProps {
@@ -183,8 +183,16 @@ export function ProductList({ products, userId, onDelete }: ProductListProps) {
             <span className="font-semibold">{formatCurrency(product.purchasePrice)}</span>
           </p>
           <p className="text-slate-800 whitespace-nowrap">
-            <span className="text-xs text-soft mr-1">P</span>
+            <span className="text-xs text-soft mr-1">支払P</span>
+            <span className="font-semibold">+{formatCurrency(product.purchasePointUsed || 0)}</span>
+          </p>
+          <p className="text-slate-800 whitespace-nowrap">
+            <span className="text-xs text-soft mr-1">付与P</span>
             <span className="font-semibold">-{formatCurrency(product.point)}</span>
+          </p>
+          <p className="text-slate-800 whitespace-nowrap">
+            <span className="text-xs text-soft mr-1">実質</span>
+            <span className="font-semibold">{formatCurrency(getEffectiveCost(product))}</span>
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

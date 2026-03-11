@@ -28,6 +28,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
     productName: '',
     quantity: '1',
     purchasePrice: '',
+    purchasePointUsed: '',
     point: '',
     channel: defaultChannel as 'ebay' | 'kaitori',
     purchaseDate: new Date().toISOString().split('T')[0],
@@ -108,6 +109,10 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         channel: lockChannel ? defaultChannel : template.channel === 'kaitori' ? 'kaitori' : 'ebay',
         purchasePrice:
           typeof template.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
+        purchasePointUsed:
+          typeof template.lastPurchasePointUsed === 'number'
+            ? String(template.lastPurchasePointUsed)
+            : prev.purchasePointUsed,
         point: typeof template.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
       }));
       setJanHint('過去データから商品名を補完しました');
@@ -145,6 +150,10 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
       channel: lockChannel ? defaultChannel : template.channel === 'kaitori' ? 'kaitori' : 'ebay',
       purchasePrice:
         typeof template.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
+      purchasePointUsed:
+        typeof template.lastPurchasePointUsed === 'number'
+          ? String(template.lastPurchasePointUsed)
+          : prev.purchasePointUsed,
       point: typeof template.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
     }));
   };
@@ -170,6 +179,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
     try {
       const qty = Math.max(1, parseInt(formData.quantity, 10) || 1);
       const purchasePrice = parseFloat(formData.purchasePrice);
+      const purchasePointUsed = parseFloat(formData.purchasePointUsed) || 0;
       const point = parseFloat(formData.point) || 0;
 
       await createProduct({
@@ -179,6 +189,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         quantityAvailable: qty,
         channel: formData.channel,
         purchasePrice,
+        purchasePointUsed,
         point,
         purchaseDate: formData.purchaseDate,
         purchaseLocation: formData.purchaseLocation,
@@ -191,6 +202,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         purchaseLocation: formData.purchaseLocation,
         channel: formData.channel,
         purchasePrice,
+        purchasePointUsed,
         point,
       });
 
@@ -204,6 +216,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
         productName: '',
         quantity: '1',
         purchasePrice: '',
+        purchasePointUsed: '',
         point: '',
         channel: defaultChannel,
         purchaseDate: new Date().toISOString().split('T')[0],
@@ -352,8 +365,19 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">ポイント</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">支払いポイント利用</label>
+              <input
+                type="number"
+                value={formData.purchasePointUsed}
+                onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
+                className="input-field"
+                placeholder="0"
+              />
+            </div>
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">付与ポイント</label>
             <input
               type="number"
               value={formData.point}
@@ -361,6 +385,22 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               className="input-field"
               placeholder="0"
             />
+            </div>
+          </div>
+
+          <div className="glass-panel p-3 text-sm">
+            <p className="text-slate-700">
+              実質原価:
+              <span className="ml-2 font-bold text-slate-900">
+                {(() => {
+                  const purchase = parseFloat(formData.purchasePrice) || 0;
+                  const used = parseFloat(formData.purchasePointUsed) || 0;
+                  const earned = parseFloat(formData.point) || 0;
+                  return `${purchase + used - earned} 円`;
+                })()}
+              </span>
+            </p>
+            <p className="text-xs text-slate-500 mt-1">購入価格 + 支払いポイント利用 - 付与ポイント</p>
           </div>
 
           <div>

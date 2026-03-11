@@ -1,14 +1,21 @@
 ﻿import type { Product, ProfitSummary } from '@/types';
 
+export function getPurchaseBaseCost(product: Product): number {
+  return product.purchasePrice + (product.purchasePointUsed || 0);
+}
+
+export function getEffectiveCost(product: Product): number {
+  return getPurchaseBaseCost(product) - product.point;
+}
+
 export function calculateProfit(product: Product): number {
   if (!product.salePrice) return 0;
-  const cost = product.purchasePrice - product.point;
-  return product.salePrice - cost;
+  return product.salePrice - getEffectiveCost(product);
 }
 
 export function calculatePointProfit(product: Product): number {
   if (!product.salePrice) return 0;
-  return product.salePrice - product.purchasePrice;
+  return product.salePrice - getPurchaseBaseCost(product);
 }
 
 export function calculateProfitSummary(products: Product[]): ProfitSummary {
@@ -16,11 +23,11 @@ export function calculateProfitSummary(products: Product[]): ProfitSummary {
   const inventory = products.filter((p) => p.status === 'inventory');
   const waiting = products.filter((p) => p.status === 'pending');
 
-  const totalCost = products.reduce((sum, p) => sum + (p.purchasePrice - p.point), 0);
+  const totalCost = products.reduce((sum, p) => sum + getEffectiveCost(p), 0);
   const totalRevenue = sold.reduce((sum, p) => sum + (p.salePrice || 0), 0);
   const totalProfit = sold.reduce((sum, p) => sum + calculateProfit(p), 0);
   const totalPointProfit = sold.reduce((sum, p) => sum + calculatePointProfit(p), 0);
-  const inventoryValue = inventory.reduce((sum, p) => sum + p.purchasePrice, 0);
+  const inventoryValue = inventory.reduce((sum, p) => sum + getPurchaseBaseCost(p), 0);
 
   return {
     totalProducts: products.length,

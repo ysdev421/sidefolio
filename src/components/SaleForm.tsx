@@ -1,8 +1,14 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Save, Loader, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
-import { calculateProfit, calculatePointProfit, formatCurrency } from '@/lib/utils';
+import {
+  calculateProfit,
+  calculatePointProfit,
+  formatCurrency,
+  getEffectiveCost,
+  getPurchaseBaseCost,
+} from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface SaleFormProps {
@@ -40,47 +46,44 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
 
       onClose?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save sale');
+      setError(err instanceof Error ? err.message : '売却情報の保存に失敗しました');
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
       <div className="w-full bg-white rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto animate-slide-in">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">売却情報を入力</h2>
             <p className="text-gray-600 text-sm mt-1">{product.productName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
             <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-gray-700">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-gray-700">
+          <p>
             <span className="font-medium">購入価格:</span> {formatCurrency(product.purchasePrice)}
-            {product.point > 0 && (
-              <>
-                {' '}
-                <span className="font-medium">ポイント:</span> -{formatCurrency(product.point)}
-              </>
-            )}
           </p>
-          <p className="text-sm text-gray-700 mt-1">
-            <span className="font-medium">実質価格:</span>{' '}
-            {formatCurrency(product.purchasePrice - product.point)}
+          {(product.purchasePointUsed || 0) > 0 && (
+            <p>
+              <span className="font-medium">支払いポイント利用:</span> +{formatCurrency(product.purchasePointUsed || 0)}
+            </p>
+          )}
+          {product.point > 0 && (
+            <p>
+              <span className="font-medium">付与ポイント:</span> -{formatCurrency(product.point)}
+            </p>
+          )}
+          <p className="mt-1 font-bold text-blue-600">
+            実質原価: {formatCurrency(getEffectiveCost(product))}
+            <span className="text-xs text-slate-500 font-normal ml-2">(購入側 {formatCurrency(getPurchaseBaseCost(product))})</span>
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Sale Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               売却価格 <span className="text-red-500">*</span>
@@ -89,9 +92,7 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
               <input
                 type="number"
                 value={formData.salePrice}
-                onChange={(e) =>
-                  setFormData({ ...formData, salePrice: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
                 required
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
                 placeholder="0"
@@ -100,45 +101,34 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
             </div>
           </div>
 
-          {/* Sale Location */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              売却先
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">売却先</label>
             <select
               value={formData.saleLocation}
-              onChange={(e) =>
-                setFormData({ ...formData, saleLocation: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, saleLocation: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
             >
               <option>メルカリ</option>
               <option>Amazon</option>
               <option>eBay</option>
-              <option>買取業者</option>
+              <option>買取店</option>
               <option>その他</option>
             </select>
           </div>
 
-          {/* Sale Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              売却日
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">売却日</label>
             <input
               type="date"
               value={formData.saleDate}
-              onChange={(e) =>
-                setFormData({ ...formData, saleDate: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
             />
           </div>
 
-          {/* Profit Preview */}
           {salePrice > 0 && (
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold text-gray-900">利益計算</h3>
+              <h3 className="font-semibold text-gray-900">利益プレビュー</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-600 mb-1">利益</p>
@@ -156,14 +146,12 @@ export function SaleForm({ product, userId, onClose }: SaleFormProps) {
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}

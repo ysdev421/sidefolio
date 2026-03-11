@@ -22,6 +22,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     quantityAvailable: String(product.quantityAvailable || product.quantityTotal || 1),
     channel: (product.channel === 'kaitori' ? 'kaitori' : 'ebay') as 'ebay' | 'kaitori',
     purchasePrice: String(product.purchasePrice),
+    purchasePointUsed: String(product.purchasePointUsed || 0),
     point: String(product.point),
     purchaseDate: product.purchaseDate,
     purchaseLocation: product.purchaseLocation,
@@ -43,6 +44,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
         quantityAvailable: Math.max(0, parseInt(formData.quantityAvailable, 10) || 0),
         channel: formData.channel,
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
+        purchasePointUsed: parseFloat(formData.purchasePointUsed) || 0,
         point: parseFloat(formData.point) || 0,
         purchaseDate: formData.purchaseDate,
         purchaseLocation: formData.purchaseLocation,
@@ -133,7 +135,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">購入価格</label>
                   <input
@@ -145,7 +147,16 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">ポイント</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">支払いP利用</label>
+                  <input
+                    type="number"
+                    value={formData.purchasePointUsed}
+                    onChange={(e) => setFormData({ ...formData, purchasePointUsed: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">付与ポイント</label>
                   <input
                     type="number"
                     value={formData.point}

@@ -36,6 +36,7 @@ interface SaleBatchItem {
   productName: string;
   quantity: number;
   purchasePrice: number;
+  purchasePointUsed?: number;
   point: number;
 }
 
@@ -132,6 +133,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           productName: product.productName,
           quantity: qty,
           purchasePrice: product.purchasePrice,
+          purchasePointUsed: product.purchasePointUsed || 0,
           point: product.point,
           status: 'in_progress',
           createdAt: now,
@@ -164,12 +166,13 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         productName: i.productName,
         quantity: Number(i.quantity || 1),
         purchasePrice: Number(i.purchasePrice || 0),
+        purchasePointUsed: Number(i.purchasePointUsed || 0),
         point: Number(i.point || 0),
       }));
 
     const init: Record<string, string> = {};
     for (const i of items) {
-      const unitCost = Math.max(0, i.purchasePrice - i.point);
+      const unitCost = Math.max(0, i.purchasePrice + (i.purchasePointUsed || 0) - i.point);
       init[i.id] = String(unitCost * i.quantity);
     }
 

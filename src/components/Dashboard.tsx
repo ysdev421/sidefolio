@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { DollarSign, Package, TrendingUp } from 'lucide-react';
-import { calculateProfit, calculateProfitSummary, formatCurrency } from '@/lib/utils';
+import { calculateProfit, calculateProfitSummary, formatCurrency, getPurchaseBaseCost } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface DashboardProps {
@@ -32,7 +32,7 @@ function calcMoM(products: Product[]) {
     return {
       revenue: target.reduce((sum, p) => sum + (p.salePrice || 0), 0),
       profit: target.reduce((sum, p) => sum + calculateProfit(p), 0),
-      pointProfit: target.reduce((sum, p) => sum + ((p.salePrice || 0) - p.purchasePrice), 0),
+      pointProfit: target.reduce((sum, p) => sum + ((p.salePrice || 0) - getPurchaseBaseCost(p)), 0),
     };
   };
 
@@ -62,7 +62,7 @@ function calcInventoryMoM(products: Product[]) {
   const sumByMonth = (monthKey: string) =>
     inventory
       .filter((p) => getMonthKey(p.purchaseDate) === monthKey)
-      .reduce((sum, p) => sum + p.purchasePrice, 0);
+      .reduce((sum, p) => sum + getPurchaseBaseCost(p), 0);
 
   const cur = sumByMonth(current);
   const prv = sumByMonth(prev);
@@ -81,7 +81,7 @@ function buildMonthlySeries(products: Product[]) {
     const cur = monthMap.get(key) || { revenue: 0, profit: 0, pointProfit: 0 };
     cur.revenue += p.salePrice || 0;
     cur.profit += calculateProfit(p);
-    cur.pointProfit += (p.salePrice || 0) - p.purchasePrice;
+    cur.pointProfit += (p.salePrice || 0) - getPurchaseBaseCost(p);
     monthMap.set(key, cur);
   }
 
