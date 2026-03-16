@@ -9,6 +9,9 @@ type JanRow = { janCode: string; productName: string; url?: string };
 type DiffReport = { newCount: number; updateCount: number };
 
 const BASE_URL = 'https://gamekaitori.jp/';
+const MAX_PAGES_HARD = 200;
+const EXTRACT_COOLDOWN_MS = 5 * 60 * 1000;
+const LAST_EXTRACT_KEY = 'admin_jan_last_extract_at';
 const SEED_URLS = [
   BASE_URL,
   'https://gamekaitori.jp/series/',
@@ -35,6 +38,7 @@ const normalizeProductName = (value: string) =>
     .replace(/^\[[^\]]+\]\s*/, '')
     .trim();
 const toProxyUrl = (url: string) => `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchText(url: string): Promise<string> {
   try {
@@ -46,6 +50,31 @@ async function fetchText(url: string): Promise<string> {
   const proxied = await fetch(toProxyUrl(url));
   if (!proxied.ok) throw new Error(`取得失敗: ${url}`);
   return proxied.text();
+}
+
+async function checkRobotsNote(): Promise<string> {
+  try {
+    const text = await fetchText('https://gamekaitori.jp/robots.txt');
+    const lines = text.split(/\r?\n/).map((l) => l.trim());
+    let inWildcard = false;
+    let disallowAll = false;
+    for (const line of lines) {
+      if (!line || line.startsWith('#')) continue;
+      const lower = line.toLowerCase();
+      if (lower.startsWith('user-agent:')) {
+        inWildcard = lower.includes('*');
+        continue;
+      }
+      if (inWildcard && lower.startsWith('disallow:')) {
+        const value = line.split(':').slice(1).join(':').trim();
+        if (value === '/') disallowAll = true;
+      }
+    }
+    if (disallowAll) return 'robots.txt で User-agent:* の Disallow:/ が指定されています。実行を控えてください。';
+    return 'robots.txt 確認済み（全面禁止は検出なし）';
+  } catch {
+    return 'robots.txt を確認できませんでした。アクセス頻度を控えて実行してください。';
+  }
 }
 
 function extractLinks(htmlOrText: string, currentUrl: string): string[] {
@@ -154,12 +183,14 @@ function downloadCsv(rows: JanRow[]) {
 export function AdminJanManager() {
   const [rows, setRows] = useState<JanRow[]>([]);
   const [maxPages, setMaxPages] = useState(80);
+  const [delayMs, setDelayMs] = useState(700);
   const [loadingExtract, setLoadingExtract] = useState(false);
   const [loadingImport, setLoadingImport] = useState(false);
   const [loadingDiff, setLoadingDiff] = useState(false);
   const [extractProgress, setExtractProgress] = useState(0);
   const [importProgress, setImportProgress] = useState(0);
   const [log, setLog] = useState('未実行');
+  const [robotsNote, setRobotsNote] = useState('');
   const [diff, setDiff] = useState<DiffReport>({ newCount: 0, updateCount: 0 });
   const [onlyNew, setOnlyNew] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -177,6 +208,7 @@ export function AdminJanManager() {
     try {
       const report = await buildDiffReport(targetRows.filter((r) => r.productName !== '（要確認）'), setImportProgress);
       setDiff(report);
+      return report;
     } finally {
       setLoadingDiff(false);
       setImportProgress(0);
@@ -184,19 +216,31 @@ export function AdminJanManager() {
   };
 
   const runExtract = async () => {
+    const now = Date.now();
+    const last = Number(localStorage.getItem(LAST_EXTRACT_KEY) || '0');
+    if (last > 0 && now - last < EXTRACT_COOLDOWN_MS) {
+      const remainSec = Math.ceil((EXTRACT_COOLDOWN_MS - (now - last)) / 1000);
+      setLog(`連続実行を制限中です。あと ${remainSec} 秒待ってください。`);
+      return;
+    }
+
     setLoadingExtract(true);
     setExtractProgress(0);
     setLog('買取WIKIから抽出中...');
     try {
+      setRobotsNote(await checkRobotsNote());
+      localStorage.setItem(LAST_EXTRACT_KEY, String(Date.now()));
+
+      const cappedMaxPages = Math.min(MAX_PAGES_HARD, Math.max(1, maxPages));
       const queue = [...new Set(SEED_URLS)];
       const visited = new Set<string>();
       const map = new Map<string, JanRow>();
 
-      while (queue.length > 0 && visited.size < maxPages) {
+      while (queue.length > 0 && visited.size < cappedMaxPages) {
         const url = queue.shift();
         if (!url || visited.has(url)) continue;
         visited.add(url);
-        setExtractProgress(Math.round((visited.size / maxPages) * 100));
+        setExtractProgress(Math.round((visited.size / cappedMaxPages) * 100));
 
         let text = '';
         try {
@@ -212,15 +256,17 @@ export function AdminJanManager() {
 
         for (const link of extractLinks(text, url)) {
           if (visited.has(link)) continue;
-          if (queue.length > maxPages * 4) break;
+          if (queue.length > cappedMaxPages * 4) break;
           queue.push(link);
         }
+
+        if (delayMs > 0) await sleep(delayMs);
       }
 
       const next = toValidRows([...map.values()]);
       setRows(next);
       await recalcDiff(next);
-      setLog(`抽出完了: ${next.length}件 / 巡回 ${Math.min(visited.size, maxPages)}ページ`);
+      setLog(`抽出完了: ${next.length}件 / 巡回 ${Math.min(visited.size, cappedMaxPages)}ページ`);
       setExtractProgress(100);
     } catch (e) {
       setLog(e instanceof Error ? e.message : '抽出に失敗しました');
@@ -256,8 +302,8 @@ export function AdminJanManager() {
         setImportProgress(Math.round((processed / Math.max(1, targets.length)) * 100));
       }
 
-      await recalcDiff(validRows);
-      setLog(`取り込み完了: ${processed}件 (新規 ${diff.newCount} / 更新候補 ${diff.updateCount})`);
+      const report = await recalcDiff(validRows);
+      setLog(`取り込み完了: ${processed}件 (新規 ${report?.newCount || 0} / 更新候補 ${report?.updateCount || 0})`);
       setImportProgress(100);
     } catch (e) {
       setLog(e instanceof Error ? e.message : '取り込みに失敗しました');
@@ -292,9 +338,20 @@ export function AdminJanManager() {
             <input
               type="number"
               min={1}
-              max={1000}
+              max={MAX_PAGES_HARD}
               value={maxPages}
-              onChange={(e) => setMaxPages(Math.max(1, Number(e.target.value || 1)))}
+              onChange={(e) => setMaxPages(Math.min(MAX_PAGES_HARD, Math.max(1, Number(e.target.value || 1))))}
+              className="input-field ml-2 w-28"
+            />
+          </label>
+          <label className="text-sm text-slate-700">
+            間隔(ms)
+            <input
+              type="number"
+              min={200}
+              max={5000}
+              value={delayMs}
+              onChange={(e) => setDelayMs(Math.max(200, Number(e.target.value || 200)))}
               className="input-field ml-2 w-28"
             />
           </label>
@@ -366,6 +423,8 @@ export function AdminJanManager() {
           )}
           <p>差分: 新規 {diff.newCount}件 / 更新候補 {diff.updateCount}件</p>
           <p>取り込み対象: {importTargetCount}件</p>
+          {robotsNote && <p className="text-xs text-slate-500">{robotsNote}</p>}
+          <p className="text-xs text-slate-500">抽出は最大 {MAX_PAGES_HARD} ページ、連続実行は5分クールダウンです。</p>
         </div>
       </div>
 
