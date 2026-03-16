@@ -1,7 +1,7 @@
 ﻿import { useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { Download, Loader2, Upload } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, documentId, getDoc, getDocs, limit, orderBy, query, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { upsertJanMaster } from '@/lib/firestore';
 
@@ -37,11 +37,7 @@ const decodeHtml = (value: string) =>
     .replace(/&#39;/g, "'");
 const cleanText = (value: string) => decodeHtml(value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
 const BRAND_PREFIX_RE = /^(SONY|FACEBOOK|META|NINTENDO|MICROSOFT|SEGA|KONAMI|CAPCOM|BANDAI(?:\s+NAMCO)?|SQUARE(?:\s+ENIX)?|ATLUS|HORI)\s*[:\-\/]?\s*/i;
-const normalizeProductName = (value: string) =>
-  cleanText(value)
-    .replace(BRAND_PREFIX_RE, '')
-    .replace(/^\[[^\]]+\]\s*/, '')
-    .trim();
+const normalizeProductName = (value: string) => cleanText(value).replace(BRAND_PREFIX_RE, '').replace(/^\[[^\]]+\]\s*/, '').trim();
 const toProxyUrl = (url: string) => `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -178,9 +174,7 @@ async function buildDiffReport(rows: JanRow[], setProgress?: (v: number) => void
 }
 
 function downloadCsv(rows: JanRow[]) {
-  const csv = Papa.unparse(
-    rows.map((r) => ({ janCode: r.janCode, productName: r.productName, url: r.url || '' }))
-  );
+  const csv = Papa.unparse(rows.map((r) => ({ janCode: r.janCode, productName: r.productName, url: r.url || '' })));
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -193,25 +187,30 @@ function downloadCsv(rows: JanRow[]) {
 
 export function AdminJanManager() {
   const [rows, setRows] = useState<JanRow[]>([]);
+  const [existingJanRows, setExistingJanRows] = useState<JanRow[]>([]);
+  const [existingFilter, setExistingFilter] = useState('');
   const [maxPages, setMaxPages] = useState(80);
   const [delayMs, setDelayMs] = useState(700);
   const [loadingExtract, setLoadingExtract] = useState(false);
   const [loadingImport, setLoadingImport] = useState(false);
   const [loadingDiff, setLoadingDiff] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const [extractProgress, setExtractProgress] = useState(0);
   const [importProgress, setImportProgress] = useState(0);
+  const [existingProgress, setExistingProgress] = useState(0);
   const [log, setLog] = useState('未実行');
   const [robotsNote, setRobotsNote] = useState('');
   const [diff, setDiff] = useState<DiffReport>({ newCount: 0, updateCount: 0, newJanCodes: [], updateJanCodes: [] });
   const [onlyNew, setOnlyNew] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const validRows = useMemo(
-    () => rows.filter((r) => r.productName && r.productName !== '（要確認）'),
-    [rows]
-  );
-
+  const validRows = useMemo(() => rows.filter((r) => r.productName && r.productName !== '（要確認）'), [rows]);
   const importTargetCount = onlyNew ? diff.newCount : validRows.length;
+  const existingViewRows = useMemo(() => {
+    const q = existingFilter.trim().toLowerCase();
+    if (!q) return existingJanRows;
+    return existingJanRows.filter((r) => `${r.janCode} ${r.productName}`.toLowerCase().includes(q));
+  }, [existingFilter, existingJanRows]);
 
   const recalcDiff = async (targetRows: JanRow[]) => {
     setLoadingDiff(true);
@@ -223,6 +222,48 @@ export function AdminJanManager() {
     } finally {
       setLoadingDiff(false);
       setImportProgress(0);
+    }
+  };
+
+  const loadExistingJanMaster = async () => {
+    setLoadingExisting(true);
+    setExistingProgress(0);
+    setLog('jan_master の既存JANを取得中...');
+    try {
+      const pageSize = 500;
+      const hardCap = 10000;
+      const all: JanRow[] = [];
+      let lastDoc: any = null;
+
+      while (all.length < hardCap) {
+        const constraints: any[] = [orderBy(documentId()), limit(pageSize)];
+        if (lastDoc) constraints.push(startAfter(lastDoc));
+        const snap = await getDocs(query(collection(db, 'jan_master'), ...constraints));
+        if (snap.empty) break;
+
+        for (const d of snap.docs as any[]) {
+          const data = d.data() as any;
+          const jan = normalizeJanCode(String(data?.janCode || d.id || ''));
+          const name = String(data?.productName || '').trim();
+          if (!jan) continue;
+          all.push({ janCode: jan, productName: name, url: '' });
+        }
+
+        lastDoc = snap.docs[snap.docs.length - 1];
+        setExistingProgress(Math.min(99, Math.round((all.length / hardCap) * 100)));
+        if (snap.size < pageSize) break;
+      }
+
+      const map = new Map<string, JanRow>();
+      for (const row of all) if (!map.has(row.janCode)) map.set(row.janCode, row);
+      const next = [...map.values()].sort((a, b) => a.janCode.localeCompare(b.janCode));
+      setExistingJanRows(next);
+      setExistingProgress(100);
+      setLog(`jan_master 取得完了: ${next.length}件`);
+    } catch (e) {
+      setLog(e instanceof Error ? e.message : 'jan_master 取得に失敗しました');
+    } finally {
+      setLoadingExisting(false);
     }
   };
 
@@ -376,7 +417,7 @@ export function AdminJanManager() {
           <button
             type="button"
             onClick={runExtract}
-            disabled={loadingExtract || loadingImport || loadingDiff}
+            disabled={loadingExtract || loadingImport || loadingDiff || loadingExisting}
             className="btn-primary px-4 py-2 rounded-xl inline-flex items-center gap-2"
           >
             {loadingExtract ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -386,7 +427,7 @@ export function AdminJanManager() {
           <button
             type="button"
             onClick={runImport}
-            disabled={loadingExtract || loadingImport || loadingDiff || importTargetCount === 0}
+            disabled={loadingExtract || loadingImport || loadingDiff || loadingExisting || importTargetCount === 0}
             className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 inline-flex items-center gap-2"
           >
             {loadingImport ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -396,7 +437,7 @@ export function AdminJanManager() {
           <button
             type="button"
             onClick={() => downloadCsv(validRows)}
-            disabled={validRows.length === 0 || loadingExtract || loadingImport || loadingDiff}
+            disabled={validRows.length === 0 || loadingExtract || loadingImport || loadingDiff || loadingExisting}
             className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800"
           >
             CSVダウンロード
@@ -405,10 +446,18 @@ export function AdminJanManager() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={loadingExtract || loadingImport || loadingDiff}
+            disabled={loadingExtract || loadingImport || loadingDiff || loadingExisting}
             className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800"
           >
             CSV読み込み
+          </button>
+          <button
+            type="button"
+            onClick={loadExistingJanMaster}
+            disabled={loadingExtract || loadingImport || loadingDiff || loadingExisting}
+            className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-800"
+          >
+            jan_master既存一覧を取得
           </button>
           <input
             ref={fileInputRef}
@@ -426,11 +475,8 @@ export function AdminJanManager() {
 
         <div className="text-sm text-slate-700 space-y-1">
           <p>{log}</p>
-          {(loadingExtract || loadingImport || loadingDiff) && (
-            <p>
-              進捗: {loadingExtract ? `${extractProgress}%` : `${importProgress}%`}
-            </p>
-          )}
+          {(loadingExtract || loadingImport || loadingDiff) && <p>進捗: {loadingExtract ? `${extractProgress}%` : `${importProgress}%`}</p>}
+          {loadingExisting && <p>既存一覧取得 進捗: {existingProgress}%</p>}
           <p>差分: 新規 {diff.newCount}件 / 更新候補 {diff.updateCount}件</p>
           <p>取り込み対象: {importTargetCount}件</p>
           {robotsNote && <p className="text-xs text-slate-500">{robotsNote}</p>}
@@ -462,6 +508,30 @@ export function AdminJanManager() {
           {(onlyNew ? diff.newJanCodes : validRows.map((r) => r.janCode)).map((jan) => (
             <div key={jan} className="text-xs text-slate-700 p-1">
               <span className="font-semibold">{jan}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="glass-panel p-5 space-y-2">
+        <p className="text-sm text-slate-600">jan_master 既存登録JAN一覧: {existingJanRows.length}件</p>
+        <input
+          value={existingFilter}
+          onChange={(e) => setExistingFilter(e.target.value)}
+          className="input-field"
+          placeholder="JANまたは商品名で絞り込み"
+        />
+        <div className="max-h-56 overflow-auto border border-slate-200 rounded-xl p-2 space-y-1 bg-white/60">
+          {existingJanRows.length === 0 && (
+            <p className="text-sm text-slate-500 p-2">「jan_master既存一覧を取得」を押すと表示されます</p>
+          )}
+          {existingJanRows.length > 0 && existingViewRows.length === 0 && (
+            <p className="text-sm text-slate-500 p-2">絞り込み条件に一致するJANがありません</p>
+          )}
+          {existingViewRows.map((row) => (
+            <div key={`existing-${row.janCode}`} className="text-xs text-slate-700 p-1">
+              <span className="font-semibold">{row.janCode}</span>
+              {row.productName ? ` / ${row.productName}` : ''}
             </div>
           ))}
         </div>
