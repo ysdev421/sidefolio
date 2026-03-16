@@ -17,10 +17,13 @@ const PurchaseLocationMaster = lazy(() =>
 const StatusBatchManager = lazy(() =>
   import('@/components/StatusBatchManager').then((m) => ({ default: m.StatusBatchManager }))
 );
+const AdminJanManager = lazy(() =>
+  import('@/components/AdminJanManager').then((m) => ({ default: m.AdminJanManager }))
+);
 
 type Screen = 'summary' | 'list' | 'sale';
 type SystemType = 'ebay' | 'kaitori';
-type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager';
+type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'adminJanManager';
 
 function App() {
   const { authLoading } = useAuth();
@@ -39,6 +42,11 @@ function App() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const isKaitori = activeSystem === 'kaitori';
+  const adminEmails = String(import.meta.env.VITE_ADMIN_EMAILS || '')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = adminEmails.length > 0 && adminEmails.includes((user?.email || '').toLowerCase());
   const currentScreen = screenBySystem[activeSystem];
   const screen: Screen = !isKaitori && currentScreen === 'sale' ? 'list' : currentScreen;
 
@@ -174,6 +182,19 @@ function App() {
               >
                 ステータス一括管理
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setAppView('adminJanManager');
+                    setShowSystemMenu(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                    appView === 'adminJanManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                  }`}
+                >
+                  管理者: JAN抽出/投入
+                </button>
+              )}
             </div>
           )}
         </section>
@@ -191,6 +212,8 @@ function App() {
               onBulkUpdate={bulkUpdateStatus}
               onBulkChannelUpdate={bulkUpdateChannel}
             />
+          ) : appView === 'adminJanManager' && isAdmin ? (
+            <AdminJanManager />
           ) : screen === 'summary' ? (
             <section>
               <div className="mb-4">
