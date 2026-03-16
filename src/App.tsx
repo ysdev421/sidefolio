@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useState } from 'react';
-import { BarChart3, ChevronDown, List, Menu, Plus, Truck } from 'lucide-react';
+import { BarChart3, ChevronDown, List, Plus, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -31,7 +31,7 @@ function App() {
   const { products, deleteProductData, updateProductData } = useProducts(user?.id || null);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showSystemMenu, setShowSystemMenu] = useState(false);
+  const [showManagementMenu, setShowManagementMenu] = useState(false);
   const [appView, setAppView] = useState<AppView>('system');
   const [activeSystem, setActiveSystem] = useState<SystemType>('ebay');
   const [screenBySystem, setScreenBySystem] = useState<Record<SystemType, Screen>>({
@@ -92,8 +92,6 @@ function App() {
     return <LoginForm />;
   }
 
-  const systemLabel = activeSystem === 'ebay' ? 'eBayシステム' : '買取システム';
-
   const setScreen = (nextScreen: Screen) => {
     setScreenBySystem((prev) => ({ ...prev, [activeSystem]: nextScreen }));
   };
@@ -101,7 +99,7 @@ function App() {
   const switchSystem = (nextSystem: SystemType) => {
     setAppView('system');
     setActiveSystem(nextSystem);
-    setShowSystemMenu(false);
+    setShowManagementMenu(false);
     if (nextSystem === 'ebay') {
       setScreenBySystem((prev) => ({ ...prev, ebay: prev.ebay === 'sale' ? 'list' : prev.ebay }));
     }
@@ -132,20 +130,12 @@ function App() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
         <section className="mb-5 relative">
-          <button
-            onClick={() => setShowSystemMenu((v) => !v)}
-            className="glass-panel px-4 py-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-800 hover:bg-white/80 transition"
-          >
-            <Menu className="w-4 h-4" />
-            {systemLabel}
-            <ChevronDown className={`w-4 h-4 transition ${showSystemMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showSystemMenu && (
-            <div className="absolute mt-2 w-64 glass-panel p-2 z-20">
+          <div className="mb-3">
+            <div className="text-xs text-soft font-semibold tracking-wide mb-2">システム切替</div>
+            <div className="glass-panel p-1.5 inline-flex gap-1">
               <button
                 onClick={() => switchSystem('ebay')}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
                   activeSystem === 'ebay' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                 }`}
               >
@@ -153,17 +143,30 @@ function App() {
               </button>
               <button
                 onClick={() => switchSystem('kaitori')}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${
                   activeSystem === 'kaitori' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
                 }`}
               >
                 買取システム
               </button>
-              <hr className="my-2 border-slate-200" />
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowManagementMenu((v) => !v)}
+            className="glass-panel px-4 py-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-800 hover:bg-white/80 transition"
+          >
+            <Settings className="w-4 h-4" />
+            管理メニュー
+            <ChevronDown className={`w-4 h-4 transition ${showManagementMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showManagementMenu && (
+            <div className="absolute mt-2 w-64 glass-panel p-2 z-20">
               <button
                 onClick={() => {
                   setAppView('purchaseLocationMaster');
-                  setShowSystemMenu(false);
+                  setShowManagementMenu(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
                   appView === 'purchaseLocationMaster' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
@@ -174,7 +177,7 @@ function App() {
               <button
                 onClick={() => {
                   setAppView('statusBatchManager');
-                  setShowSystemMenu(false);
+                  setShowManagementMenu(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
                   appView === 'statusBatchManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
@@ -186,7 +189,7 @@ function App() {
                 <button
                   onClick={() => {
                     setAppView('adminJanManager');
-                    setShowSystemMenu(false);
+                    setShowManagementMenu(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
                     appView === 'adminJanManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
