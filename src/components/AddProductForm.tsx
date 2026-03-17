@@ -254,14 +254,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
       const normalizedJan = normalizeJanCode(formData.janCode);
       const nextFieldErrors: Record<string, string> = {};
       if (!formData.purchasePrice.trim()) nextFieldErrors.purchasePrice = '購入金額は必須です';
-      if (isKaitori) {
-        if (!normalizedJan) {
-          nextFieldErrors.janCode = '買取流しはJAN必須です';
-        }
-        if (!formData.productName.trim()) {
-          nextFieldErrors.productName = 'JAN検索で商品を確定してください';
-        }
-      }
+      if (!formData.productName.trim()) nextFieldErrors.productName = '商品名は必須です';
       if (Object.keys(nextFieldErrors).length > 0) {
         setFieldErrors(nextFieldErrors);
         setError('未入力または未確定の項目があります');
@@ -348,8 +341,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
           {isKaitori && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                商品名 or JAN検索 *
-                <span className="ml-1 inline-flex px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px]">JAN必須</span>
+                商品名 or JAN検索
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -417,7 +409,6 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               type="text"
               value={formData.productName}
               onChange={(e) => {
-                if (isKaitori) return;
                 const value = e.target.value;
                 setFormData({ ...formData, productName: value });
                 const matched = templates.find((t) => t.productName === value.trim());
@@ -425,8 +416,7 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'ebay', lockC
               }}
               required
               className="input-field"
-              placeholder={isKaitori ? 'JANから自動入力' : '例: チェキフィルム'}
-              readOnly={isKaitori}
+              placeholder="例: チェキフィルム"
             />
             {fieldErrors.productName && <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p>}
             {!isKaitori && candidateTemplates.length > 0 && (
