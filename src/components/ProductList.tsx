@@ -32,9 +32,9 @@ export function ProductList({ products, userId, onDelete }: ProductListProps) {
   const fmt = (d: Date) => d.toISOString().split('T')[0];
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
-  const [fromDate, setFromDate] = useState(fmt(currentMonthStart));
-  const [toDate, setToDate] = useState(fmt(new Date(nextMonthStart.getTime() - 1)));
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('thisMonth');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('all');
   const [sortKey, setSortKey] = useState<SortKey>('purchaseDateDesc');
   const [showFilters, setShowFilters] = useState(false);
   const [showDateRange, setShowDateRange] = useState(false);
