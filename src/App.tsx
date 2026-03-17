@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { BarChart3, ChevronDown, List, Plus, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
@@ -31,6 +31,18 @@ function App() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showManagementMenu, setShowManagementMenu] = useState(false);
+  const managementMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showManagementMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (managementMenuRef.current && !managementMenuRef.current.contains(e.target as Node)) {
+        setShowManagementMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showManagementMenu]);
   const [appView, setAppView] = useState<AppView>('system');
   const [screen, setScreen] = useState<Screen>('list');
   const [periodFilter, setPeriodFilter] = useState<'thisMonth' | 'lastMonth' | 'thisYear' | 'all'>('thisMonth');
@@ -102,7 +114,7 @@ function App() {
       <Header userName={user.displayName || user.email} />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
-        <section className="mb-5 relative">
+        <section className="mb-5 relative" ref={managementMenuRef}>
           <button
             onClick={() => setShowManagementMenu((v) => !v)}
             className="glass-panel px-4 py-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-800 hover:bg-white/80 transition"
