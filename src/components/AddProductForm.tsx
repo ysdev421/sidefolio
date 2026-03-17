@@ -354,7 +354,6 @@ export function AddProductForm({ userId, onClose, defaultChannel = 'kaitori', lo
                   onBlur={() => resolveKaitoriLookup(kaitoriLookup)}
                   className="input-field"
                   placeholder="例: 4901234567890 / 商品名"
-                  required
                 />
                 <button
                   type="button"
