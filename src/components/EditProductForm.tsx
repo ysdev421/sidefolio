@@ -35,6 +35,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   });
   const [error, setError] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -146,8 +147,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   };
 
   const handleDelete = async () => {
-    const ok = window.confirm(`「${product.productName}」を削除します。元に戻せません。`);
-    if (!ok) return;
     try {
       await onDelete(product.id);
       onClose?.();
@@ -436,7 +435,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
           <div className="sticky bottom-0 bg-white/95 backdrop-blur py-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={loading}
               className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition disabled:opacity-60"
             >
@@ -458,6 +457,17 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
             <div className="flex justify-end gap-2">
               <button className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700" onClick={() => setShowLeaveConfirm(false)}>戻る</button>
               <button className="px-3 py-2 rounded-lg bg-rose-600 text-white" onClick={() => onClose?.()}>破棄して閉じる</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-4 w-full max-w-sm space-y-3">
+            <p className="text-sm font-semibold text-slate-900">「{product.productName}」を削除します。元に戻せません。</p>
+            <div className="flex justify-end gap-2">
+              <button className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700" onClick={() => setShowDeleteConfirm(false)}>キャンセル</button>
+              <button className="px-3 py-2 rounded-lg bg-rose-600 text-white" onClick={handleDelete}>削除する</button>
             </div>
           </div>
         </div>
