@@ -31,6 +31,15 @@ export interface ProductTemplate {
   lastUsedAt: string;
 }
 
+export interface ProductMaster {
+  id: string;
+  userId: string;
+  janCode: string;
+  productName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SaleRecord {
   id: string;
   productId: string;

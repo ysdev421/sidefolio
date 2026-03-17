@@ -15,7 +15,7 @@
   where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Product, ProductTemplate, SaleRecord } from '@/types';
+import type { Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
 
 export async function addProductToFirestore(
   userId: string,
@@ -483,6 +483,55 @@ export async function addStatusBatchLogToFirestore(
     affectedCount: payload.affectedCount,
     createdAt: Timestamp.now(),
   });
+}
+
+export async function getUserProductMasters(userId: string): Promise<ProductMaster[]> {
+  const q = query(collection(db, 'product_masters'), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  const rows = snap.docs.map((d: any) => {
+    const data = d.data() as any;
+    return {
+      id: d.id,
+      userId: String(data.userId || ''),
+      janCode: String(data.janCode || ''),
+      productName: String(data.productName || ''),
+      createdAt: toIso(data.createdAt),
+      updatedAt: toIso(data.updatedAt),
+    } satisfies ProductMaster;
+  });
+  return rows.sort((a: ProductMaster, b: ProductMaster) => a.productName.localeCompare(b.productName, 'ja'));
+}
+
+export async function upsertUserProductMaster(
+  userId: string,
+  payload: { janCode: string; productName: string }
+): Promise<void> {
+  const janCode = normalizeJanCode(payload.janCode);
+  const productName = payload.productName.trim();
+  if (!userId || !janCode || !productName) {
+    throw new Error('JANコードと商品名は必須です');
+  }
+
+  const id = `${userId}_${janCode}`;
+  const ref = doc(db, 'product_masters', id);
+  const snap = await getDoc(ref);
+  const now = Timestamp.now();
+
+  await setDoc(
+    ref,
+    {
+      userId,
+      janCode,
+      productName,
+      createdAt: snap.exists() ? snap.data().createdAt : now,
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+}
+
+export async function deleteUserProductMaster(masterId: string): Promise<void> {
+  await deleteDoc(doc(db, 'product_masters', masterId));
 }
 
 const toNumberSafe = (value: unknown, fallback = 0) => {

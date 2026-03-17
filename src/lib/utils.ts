@@ -4,6 +4,13 @@ export function getActualPayment(product: Product): number {
   return product.purchasePrice;
 }
 
+export function getRemainingActualPayment(product: Product): number {
+  const total = Math.max(1, product.quantityTotal ?? 1);
+  const availableRaw = product.quantityAvailable ?? total;
+  const available = Math.min(total, Math.max(0, availableRaw));
+  return getActualPayment(product) * (available / total);
+}
+
 export function getEffectiveCost(product: Product): number {
   return product.purchasePrice - product.point;
 }
@@ -27,7 +34,7 @@ export function calculateProfitSummary(products: Product[]): ProfitSummary {
   const totalRevenue = sold.reduce((sum, p) => sum + (p.salePrice || 0), 0);
   const totalProfit = sold.reduce((sum, p) => sum + calculateProfit(p), 0);
   const totalPointProfit = sold.reduce((sum, p) => sum + calculatePointProfit(p), 0);
-  const inventoryValue = inventory.reduce((sum, p) => sum + getActualPayment(p), 0);
+  const inventoryValue = inventory.reduce((sum, p) => sum + getRemainingActualPayment(p), 0);
 
   return {
     totalProducts: products.length,

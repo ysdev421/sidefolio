@@ -1,11 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Camera, Loader, Plus, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import {
-  getJanMasterByCode,
-  getUserProductNameByJanFromProducts,
-  getUserTemplateByJanFromProducts,
-  getUserJanUsageByCode,
+  getPurchaseLocationUsageCounts,
+  getUserProductMasters,
   getUserPurchaseLocations,
   getUserProductTemplates,
   upsertJanMaster,
@@ -13,7 +11,7 @@ import {
   upsertUserJanUsage,
 } from '@/lib/firestore';
 import { useStore } from '@/lib/store';
-import type { ProductTemplate } from '@/types';
+import type { ProductMaster, ProductTemplate } from '@/types';
 import { JanScannerModal } from '@/components/JanScannerModal';
 
 interface AddProductFormProps {
@@ -24,7 +22,6 @@ interface AddProductFormProps {
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
 export function AddProductForm({ userId, onClose }: AddProductFormProps) {
-  const lookupSeqRef = useRef(0);
   const isKaitori = true;
   const [formData, setFormData] = useState({
     janCode: '',
@@ -40,12 +37,12 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [janHint, setJanHint] = useState('');
-  const [janLookupLoading, setJanLookupLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
-  const [kaitoriCandidates, setKaitoriCandidates] = useState<ProductTemplate[]>([]);
+  const [kaitoriCandidates, setKaitoriCandidates] = useState<ProductMaster[]>([]);
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
+  const [masters, setMasters] = useState<ProductMaster[]>([]);
   const [purchaseLocations, setPurchaseLocations] = useState<string[]>(['メルカリ']);
   const { createProduct } = useProducts(userId);
   const loading = useStore((state) => state.loading);
@@ -53,10 +50,15 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const rows = await getUserProductTemplates(userId);
-        setTemplates(rows);
+        const [templateRows, masterRows] = await Promise.all([
+          getUserProductTemplates(userId),
+          getUserProductMasters(userId),
+        ]);
+        setTemplates(templateRows);
+        setMasters(masterRows);
       } catch {
         setTemplates([]);
+        setMasters([]);
       }
     };
     loadTemplates();
@@ -65,18 +67,16 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
   useEffect(() => {
     const loadLocations = async () => {
       try {
-        const rows = await getUserPurchaseLocations(userId);
+        const [rows, usageCounts] = await Promise.all([
+          getUserPurchaseLocations(userId),
+          getPurchaseLocationUsageCounts(userId),
+        ]);
         const base = rows.length > 0 ? rows : ['メルカリ'];
-        let sorted = base;
-        try {
-          const raw = localStorage.getItem('purchaseLocationRecent');
-          const recent = raw ? (JSON.parse(raw) as string[]) : [];
-          if (Array.isArray(recent) && recent.length > 0) {
-            sorted = Array.from(new Set([...recent, ...base])).filter(Boolean);
-          }
-        } catch {
-          sorted = base;
-        }
+        const sorted = [...base].sort((a, b) => {
+          const byCount = (usageCounts[b] || 0) - (usageCounts[a] || 0);
+          if (byCount !== 0) return byCount;
+          return a.localeCompare(b, 'ja');
+        });
         setPurchaseLocations(sorted);
         setFormData((prev) => ({
           ...prev,
@@ -111,76 +111,36 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
 
     if (!janCode) return;
 
-    const template = templates.find((t) => normalizeJanCode(t.janCode || '') === janCode);
-    if (template?.productName) {
+    const master = masters.find((m) => normalizeJanCode(m.janCode) === janCode);
+    if (master) {
+      const template = templates.find((t) => normalizeJanCode(t.janCode || '') === janCode);
       setFormData((prev) => ({
         ...prev,
         janCode,
-        productName: template.productName,
-        purchaseLocation: template.purchaseLocation || prev.purchaseLocation,
+        productName: master.productName,
+        purchaseLocation: template?.purchaseLocation || prev.purchaseLocation,
         purchasePrice:
-          typeof template.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
-        point: typeof template.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
+          typeof template?.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
+        point: typeof template?.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
       }));
-      setJanHint('過去データから商品名を補完しました');
+      setJanHint('商品マスタから商品名を補完しました');
       return;
     }
 
-    if (janCode.length < 8) return;
-
-    const seq = ++lookupSeqRef.current;
-    setJanLookupLoading(true);
-    try {
-      const userUsage = await getUserJanUsageByCode(userId, janCode);
-      if (seq !== lookupSeqRef.current) return;
-      if (userUsage?.productName) {
-        setFormData((prev) => ({ ...prev, janCode, productName: userUsage.productName }));
-        setJanHint('あなたの利用履歴から商品名を補完しました');
-        return;
-      }
-
-      const fromTemplateStore = await getUserTemplateByJanFromProducts(userId, janCode);
-      if (seq !== lookupSeqRef.current) return;
-      if (fromTemplateStore?.productName) {
-        setFormData((prev) => ({ ...prev, janCode, productName: fromTemplateStore.productName }));
-        setJanHint('既存テンプレートから商品名を補完しました');
-        return;
-      }
-
-      const fromProducts = await getUserProductNameByJanFromProducts(userId, janCode);
-      if (seq !== lookupSeqRef.current) return;
-      if (fromProducts?.productName) {
-        setFormData((prev) => ({ ...prev, janCode, productName: fromProducts.productName }));
-        setJanHint('既存の商品データから商品名を補完しました');
-        return;
-      }
-
-      const row = await getJanMasterByCode(janCode);
-      if (seq !== lookupSeqRef.current) return;
-      if (row?.productName) {
-        setFormData((prev) => ({ ...prev, janCode, productName: row.productName }));
-        setJanHint('JANマスターから商品名を補完しました');
-      } else {
-        setJanHint('JANマスターに未登録です。商品名を入力してください');
-      }
-    } catch {
-      if (seq === lookupSeqRef.current) {
-        setJanHint('JAN照会に失敗しました。商品名を入力してください');
-      }
-    } finally {
-      if (seq === lookupSeqRef.current) setJanLookupLoading(false);
-    }
+    setFormData((prev) => ({ ...prev, productName: '' }));
+    setJanHint('商品マスタに未登録です。商品マスタ管理で登録してください');
   };
 
-  const applyTemplate = (template: ProductTemplate) => {
+  const applyMaster = (master: ProductMaster) => {
+    const template = templates.find((t) => normalizeJanCode(t.janCode || '') === normalizeJanCode(master.janCode));
     setFormData((prev) => ({
       ...prev,
-      janCode: template.janCode || prev.janCode,
-      productName: template.productName || prev.productName,
-      purchaseLocation: template.purchaseLocation || prev.purchaseLocation,
+      janCode: normalizeJanCode(master.janCode),
+      productName: master.productName || prev.productName,
+      purchaseLocation: template?.purchaseLocation || prev.purchaseLocation,
       purchasePrice:
-        typeof template.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
-      point: typeof template.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
+        typeof template?.lastPurchasePrice === 'number' ? String(template.lastPurchasePrice) : prev.purchasePrice,
+      point: typeof template?.lastPoint === 'number' ? String(template.lastPoint) : prev.point,
     }));
   };
 
@@ -195,13 +155,13 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
       return;
     }
 
-    const hits = templates
+    const hits = masters
       .filter((t) => t.productName.toLowerCase().includes(keyword.toLowerCase()))
       .slice(0, 5);
     setKaitoriCandidates(hits);
 
     if (hits.length === 1) {
-      applyTemplate(hits[0]);
+      applyMaster(hits[0]);
       setJanHint('候補を1件適用しました');
       return;
     }
@@ -213,20 +173,6 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
     }
   };
 
-  const candidateTemplates = useMemo(() => {
-    const janQuery = formData.janCode.trim();
-    const nameQuery = formData.productName.trim().toLowerCase();
-    if (!janQuery && !nameQuery) return templates.slice(0, 5);
-
-    return templates
-      .filter((t) => {
-        const hitJan = janQuery && t.janCode?.includes(janQuery);
-        const hitName = nameQuery && t.productName.toLowerCase().includes(nameQuery);
-        return Boolean(hitJan || hitName);
-      })
-      .slice(0, 5);
-  }, [templates, formData.janCode, formData.productName]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -234,9 +180,15 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
 
     try {
       const normalizedJan = normalizeJanCode(formData.janCode);
+      const matchedMaster = masters.find(
+        (m) =>
+          normalizeJanCode(m.janCode) === normalizedJan &&
+          m.productName.trim() === formData.productName.trim()
+      );
       const nextFieldErrors: Record<string, string> = {};
       if (!formData.purchasePrice.trim()) nextFieldErrors.purchasePrice = '購入金額は必須です';
       if (!formData.productName.trim()) nextFieldErrors.productName = '商品名は必須です';
+      if (!matchedMaster) nextFieldErrors.productName = '商品マスタ管理でJAN/商品名を登録してください';
       if (Object.keys(nextFieldErrors).length > 0) {
         setFieldErrors(nextFieldErrors);
         setError('未入力または未確定の項目があります');
@@ -275,14 +227,6 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
         ...(normalizedJan ? { janCode: normalizedJan } : {}),
         productName: formData.productName,
       });
-
-      try {
-        const current = JSON.parse(localStorage.getItem('purchaseLocationRecent') || '[]') as string[];
-        const next = Array.from(new Set([formData.purchaseLocation, ...current])).slice(0, 10);
-        localStorage.setItem('purchaseLocationRecent', JSON.stringify(next));
-      } catch {
-        // noop
-      }
 
       setFormData({
         janCode: '',
@@ -378,18 +322,42 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
           )}
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">商品マスタ *</label>
+            <select
+              value={selectedMasterId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedMasterId(id);
+                const selected = masters.find((m) => m.id === id);
+                if (!selected) return;
+                setFormData((prev) => ({
+                  ...prev,
+                  janCode: normalizeJanCode(selected.janCode),
+                  productName: selected.productName,
+                }));
+                void fillProductNameByJan(selected.janCode);
+              }}
+              className="input-field"
+              required
+            >
+              <option value="">商品を選択してください</option>
+              {masters.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.productName} ({m.janCode})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">商品マスタ管理で登録したJAN/商品名のみ選択できます</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">商品名 *</label>
             <input
               type="text"
               value={formData.productName}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, productName: value });
-                const matched = templates.find((t) => t.productName === value.trim());
-                if (matched) applyTemplate(matched);
-              }}
+              readOnly
               required
-              className="input-field"
+              className="input-field bg-slate-50 text-slate-700"
               placeholder="例: チェキフィルム"
             />
             {fieldErrors.productName && <p className="mt-1 text-xs text-rose-600">{fieldErrors.productName}</p>}
@@ -410,9 +378,9 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">初期ステータス</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
               <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
                 <button
                   type="button"
@@ -569,3 +537,4 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
     </div>
   );
 }
+

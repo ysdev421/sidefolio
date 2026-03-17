@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { DollarSign, Package, TrendingUp } from 'lucide-react';
-import { calculateProfit, calculateProfitSummary, formatCurrency, getActualPayment } from '@/lib/utils';
+import { calculateProfit, calculateProfitSummary, formatCurrency, getActualPayment, getRemainingActualPayment } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface DashboardProps {
@@ -62,7 +62,7 @@ function calcInventoryMoM(products: Product[]) {
   const sumByMonth = (monthKey: string) =>
     inventory
       .filter((p) => getMonthKey(p.purchaseDate) === monthKey)
-      .reduce((sum, p) => sum + getActualPayment(p), 0);
+      .reduce((sum, p) => sum + getRemainingActualPayment(p), 0);
 
   const cur = sumByMonth(current);
   const prv = sumByMonth(prev);
@@ -134,7 +134,7 @@ export function Dashboard({ products, showMoM = true }: DashboardProps) {
       tone: 'from-teal-100 to-emerald-100 text-teal-700',
     },
     {
-      label: '在庫評価',
+      label: '在庫金額',
       value: formatCurrency(summary.inventoryValue),
       sub: showMoM ? momText(inventoryMom) : null,
       subTone: inventoryMom === null ? 'text-slate-500' : inventoryMom >= 0 ? 'text-emerald-600' : 'text-rose-600',

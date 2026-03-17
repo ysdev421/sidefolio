@@ -2,7 +2,7 @@
 import { Loader, Save, Trash2, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
-import { getUserPurchaseLocations } from '@/lib/firestore';
+import { getPurchaseLocationUsageCounts, getUserPurchaseLocations } from '@/lib/firestore';
 import type { Product } from '@/types';
 
 interface EditProductFormProps {
@@ -37,18 +37,16 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   useEffect(() => {
     const loadLocations = async () => {
       try {
-        const rows = await getUserPurchaseLocations(userId);
+        const [rows, usageCounts] = await Promise.all([
+          getUserPurchaseLocations(userId),
+          getPurchaseLocationUsageCounts(userId),
+        ]);
         const base = rows.length > 0 ? rows : ['メルカリ'];
-        let sorted = base;
-        try {
-          const raw = localStorage.getItem('purchaseLocationRecent');
-          const recent = raw ? (JSON.parse(raw) as string[]) : [];
-          if (Array.isArray(recent) && recent.length > 0) {
-            sorted = Array.from(new Set([...recent, ...base])).filter(Boolean);
-          }
-        } catch {
-          sorted = base;
-        }
+        const sorted = [...base].sort((a, b) => {
+          const byCount = (usageCounts[b] || 0) - (usageCounts[a] || 0);
+          if (byCount !== 0) return byCount;
+          return a.localeCompare(b, 'ja');
+        });
         setPurchaseLocations(sorted);
         setFormData((prev) => ({
           ...prev,
@@ -67,7 +65,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   const isDirty = JSON.stringify({
     productName: formData.productName,
     status: formData.status,
-    quantityTotal: formData.quantityTotal,
     quantityAvailable: formData.quantityAvailable,
     purchasePrice: formData.purchasePrice,
     point: formData.point,
@@ -79,7 +76,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   }) !== JSON.stringify({
     productName: product.productName,
     status: product.status,
-    quantityTotal: String(product.quantityTotal || 1),
     quantityAvailable: String(product.quantityAvailable || product.quantityTotal || 1),
     purchasePrice: String(product.purchasePrice),
     point: String(product.point),
@@ -108,7 +104,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
       const updates: Partial<Product> = {
         productName: formData.productName,
         status: formData.status,
-        quantityTotal: Math.max(1, parseInt(formData.quantityTotal, 10) || 1),
         quantityAvailable: Math.max(0, parseInt(formData.quantityAvailable, 10) || 0),
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
         point: parseFloat(formData.point) || 0,
@@ -127,13 +122,6 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
       }
 
       await updateProductData(product.id, updates);
-      try {
-        const current = JSON.parse(localStorage.getItem('purchaseLocationRecent') || '[]') as string[];
-        const next = Array.from(new Set([formData.purchaseLocation, ...current])).slice(0, 10);
-        localStorage.setItem('purchaseLocationRecent', JSON.stringify(next));
-      } catch {
-        // noop
-      }
       onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '更新に失敗しました');
@@ -216,46 +204,12 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">総数量</label>
-              <div className="inline-flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      quantityTotal: String(Math.max(1, (parseInt(prev.quantityTotal, 10) || 1) - 1)),
-                    }))
-                  }
-                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
-                  title="総数量を減らす"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  value={formData.quantityTotal}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      quantityTotal: String(Math.max(1, parseInt(e.target.value || '1', 10) || 1)),
-                    })
-                  }
-                  className="input-field text-center w-14 sm:w-16 px-2"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      quantityTotal: String(Math.max(1, (parseInt(prev.quantityTotal, 10) || 1) + 1)),
-                    }))
-                  }
-                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
-                  title="総数量を増やす"
-                >
-                  +
-                </button>
-              </div>
+              <input
+                type="number"
+                value={formData.quantityTotal}
+                readOnly
+                className="input-field w-20 text-center bg-slate-50 text-slate-600"
+              />
             </div>
 
             <div>

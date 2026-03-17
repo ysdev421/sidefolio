@@ -24,12 +24,15 @@ const PurchaseLocationMaster = lazy(() =>
 const StatusBatchManager = lazy(() =>
   import('@/components/StatusBatchManager').then((m) => ({ default: m.StatusBatchManager }))
 );
+const ProductMasterManager = lazy(() =>
+  import('@/components/ProductMasterManager').then((m) => ({ default: m.ProductMasterManager }))
+);
 const AdminJanManager = lazy(() =>
   import('@/components/AdminJanManager').then((m) => ({ default: m.AdminJanManager }))
 );
 
 type Screen = 'summary' | 'list' | 'sale';
-type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'adminJanManager';
+type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager';
 
 function App() {
   const { authLoading } = useAuth();
@@ -163,6 +166,17 @@ function App() {
               >
                 ステータス一括管理
               </button>
+              <button
+                onClick={() => {
+                  setAppView('productMasterManager');
+                  setShowManagementMenu(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  appView === 'productMasterManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
+                }`}
+              >
+                商品マスタ管理
+              </button>
               {isAdmin && (
                 <button
                   onClick={() => {
@@ -188,6 +202,8 @@ function App() {
               products={filteredProducts}
               onBulkUpdate={bulkUpdateStatus}
             />
+          ) : appView === 'productMasterManager' ? (
+            <ProductMasterManager userId={user.id} />
           ) : appView === 'adminJanManager' && isAdmin ? (
             <AdminJanManager />
           ) : screen === 'summary' ? (
