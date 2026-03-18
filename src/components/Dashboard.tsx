@@ -145,7 +145,7 @@ export function Dashboard({ products, showMoM = true }: DashboardProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -154,7 +154,7 @@ export function Dashboard({ products, showMoM = true }: DashboardProps) {
                 <Icon className="w-5 h-5" />
               </div>
               <p className="text-xs text-soft font-semibold tracking-wide">{stat.label}</p>
-              <p className={`text-2xl font-black mt-1 ${stat.negative ? 'text-rose-600' : 'text-slate-900'}`}>{stat.value}</p>
+              <p className={`text-lg sm:text-2xl font-black mt-1 truncate ${stat.negative ? 'text-rose-600' : 'text-slate-900'}`}>{stat.value}</p>
               {stat.sub && <p className={`text-xs mt-1 font-semibold ${stat.subTone}`}>{stat.sub}</p>}
             </div>
           );
