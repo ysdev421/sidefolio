@@ -297,6 +297,10 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
                 <p className="text-slate-800 whitespace-nowrap">
                   <span className="text-xs text-soft mr-1">買取wiki</span>
                   <span className="font-semibold">{formatCurrency(product.kaitoriPrice)}</span>
+                  {product.kaitoriPriceAt && (() => {
+                    const mins = Math.floor((Date.now() - new Date(product.kaitoriPriceAt!).getTime()) / 60000);
+                    return <span className="ml-1 text-[10px] text-slate-400">{mins < 60 ? `${mins}分前` : `${Math.floor(mins / 60)}時間前`}</span>;
+                  })()}
                 </p>
                 <p className="whitespace-nowrap">
                   <span className="text-xs text-soft mr-1">差額</span>
