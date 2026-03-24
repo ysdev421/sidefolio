@@ -255,11 +255,11 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                                 const profitCashOnly = item.allocatedSalePrice - item.purchasePrice;
                                 return (
                                   <>
-                                    <span className={`font-semibold ${profitWithPoint >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                      利益(P含む): {profitWithPoint >= 0 ? '+' : ''}{formatCurrency(profitWithPoint)}
-                                    </span>
                                     <span className={`font-semibold ${profitCashOnly >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                       利益(現金): {profitCashOnly >= 0 ? '+' : ''}{formatCurrency(profitCashOnly)}
+                                    </span>
+                                    <span className={`font-semibold ${profitWithPoint >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                      利益(P含む): {profitWithPoint >= 0 ? '+' : ''}{formatCurrency(profitWithPoint)}
                                     </span>
                                   </>
                                 );
