@@ -189,7 +189,11 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600">売却日</span>
-                    <span className="font-semibold">{detailTarget.saleDate}</span>
+                    <span className="font-semibold">{(() => {
+                      const d = new Date(detailTarget.saleDate);
+                      const days = ['日', '月', '火', '水', '木', '金', '土'];
+                      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${days[d.getDay()]}）`;
+                    })()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">売却先</span>
