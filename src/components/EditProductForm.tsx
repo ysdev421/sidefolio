@@ -19,7 +19,7 @@ interface EditProductFormProps {
 export function EditProductForm({ product, userId, onDelete, onClose }: EditProductFormProps) {
   const { updateProductData } = useProducts(userId);
   const loading = useStore((state) => state.loading);
-  const [purchaseLocations, setPurchaseLocations] = useState<string[]>(['メルカリ']);
+  const [purchaseLocations, setPurchaseLocations] = useState<string[]>([product.purchaseLocation].filter(Boolean));
   const [janCopied, setJanCopied] = useState(false);
   const [kaitoriPrice, setKaitoriPrice] = useState<number | null>(null);
   const [kaitoriSearchUrl, setKaitoriSearchUrl] = useState('');
