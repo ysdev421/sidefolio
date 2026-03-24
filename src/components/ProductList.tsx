@@ -267,15 +267,7 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
       </div>
 
       <div className="flex items-center justify-between gap-2 text-sm">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-          <p className="text-slate-800 whitespace-nowrap">
-            <span className="text-xs text-soft mr-1">購入合計</span>
-            <span className="font-semibold">{formatCurrency(product.purchasePrice)}</span>
-          </p>
-          <p className="text-slate-800 whitespace-nowrap">
-            <span className="text-xs text-soft mr-1">付与P</span>
-            <span className="font-semibold">{formatCurrency(product.point)}</span>
-          </p>
+        <div className="flex items-center gap-x-3 min-w-0 overflow-hidden">
           <p className="text-slate-800 whitespace-nowrap">
             <span className="text-xs text-soft mr-1">実質</span>
             <span className="font-semibold">{formatCurrency(getEffectiveCost(product))}</span>
