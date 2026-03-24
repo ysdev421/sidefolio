@@ -657,6 +657,15 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
 
   const wb = writeBatch(db);
   const updatedProducts: ConfirmSaleBatchResult['updatedProducts'] = [];
+  // soldQty を事前計算して items 保存時にも参照できるようにする
+  const soldQtys = targets.map((p) => {
+    const maxQty = Math.max(1, p.quantityAvailable || p.quantityTotal || 1);
+    const requestedQty = input.productSaleQtys?.[p.id];
+    return requestedQty != null
+      ? Math.max(1, Math.min(maxQty, Math.round(requestedQty)))
+      : maxQty;
+  });
+
   const janBreakdownMap = new Map<
     string,
     {
@@ -672,10 +681,7 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
   targets.forEach((p, idx) => {
     const salePrice = allocatedRevenue[idx] || 0;
     const maxQty = Math.max(1, p.quantityAvailable || p.quantityTotal || 1);
-    const requestedQty = input.productSaleQtys?.[p.id];
-    const soldQty = requestedQty != null
-      ? Math.max(1, Math.min(maxQty, Math.round(requestedQty)))
-      : maxQty;
+    const soldQty = soldQtys[idx];
     const remainingQty = maxQty - soldQty;
     const isFullSale = remainingQty <= 0;
 
@@ -731,19 +737,26 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
   });
 
   wb.update(doc(db, 'sale_batches', batchDoc.id), {
-    items: targets.map((p, idx) => ({
-      productId: p.id,
-      janCode: p.janCode || '',
-      productName: p.productName,
-      previousStatus: p.status,
-      purchasePrice: p.purchasePrice,
-      point: p.point,
-      quantityTotal: p.quantityTotal,
-      quantityAvailable: p.quantityAvailable,
-      allocatedSalePrice: allocatedRevenue[idx] || 0,
-      allocatedCash: allocatedCash[idx] || 0,
-      allocatedPointValue: allocatedPointValue[idx] || 0,
-    })),
+    items: targets.map((p, idx) => {
+      const total = Math.max(1, p.quantityTotal || 1);
+      const sold = soldQtys[idx];
+      const purchasePriceForSold = Math.round(p.purchasePrice / total * sold);
+      const pointForSold = Math.round((p.point || 0) / total * sold);
+      return {
+        productId: p.id,
+        janCode: p.janCode || '',
+        productName: p.productName,
+        previousStatus: p.status,
+        purchasePrice: purchasePriceForSold,
+        point: pointForSold,
+        quantityTotal: p.quantityTotal,
+        quantityAvailable: p.quantityAvailable,
+        soldQty: sold,
+        allocatedSalePrice: allocatedRevenue[idx] || 0,
+        allocatedCash: allocatedCash[idx] || 0,
+        allocatedPointValue: allocatedPointValue[idx] || 0,
+      };
+    }),
     janBreakdown: Array.from(janBreakdownMap.values())
       .map((row) => ({
         janCode: row.janCode,
