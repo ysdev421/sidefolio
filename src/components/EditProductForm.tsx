@@ -23,6 +23,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   const [janCopied, setJanCopied] = useState(false);
   const [kaitoriPrice, setKaitoriPrice] = useState<number | null>(null);
   const [kaitoriSearchUrl, setKaitoriSearchUrl] = useState('');
+  const [kaitoriCachedAt, setKaitoriCachedAt] = useState<number | null>(null);
   const [kaitoriLoading, setKaitoriLoading] = useState(false);
   const [kaitoriError, setKaitoriError] = useState('');
 
@@ -206,6 +207,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                       if (result) {
                         setKaitoriPrice(result.highestPrice);
                         setKaitoriSearchUrl(result.searchUrl);
+                        setKaitoriCachedAt(result.cachedAt ?? null);
                       } else {
                         setKaitoriError('価格情報が見つかりませんでした');
                       }
@@ -223,6 +225,11 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 {kaitoriPrice !== null && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
                     最高 {kaitoriPrice.toLocaleString()}円
+                    {kaitoriCachedAt && (
+                      <span className="font-normal text-slate-400">
+                        ({Math.floor((Date.now() - kaitoriCachedAt) / 3600000)}h前のキャッシュ)
+                      </span>
+                    )}
                     <a
                       href={kaitoriSearchUrl}
                       target="_blank"
