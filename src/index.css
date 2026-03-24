@@ -14,7 +14,8 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    height: 100%;
+    overflow: hidden;
     /* ノッチ・ホームバー領域を確保 */
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
@@ -22,19 +23,24 @@
   }
 
   body {
+    height: 100%;
+    overflow: hidden;
     /* タップ時のハイライト削除 */
     -webkit-tap-highlight-color: transparent;
     /* テキスト選択禁止（UIパーツ） */
     -webkit-touch-callout: none;
-    /* スクロール慣性 */
-    -webkit-overflow-scrolling: touch;
     color: var(--ink-strong);
     background:
       radial-gradient(circle at 10% 10%, #dbeafe 0%, transparent 28%),
       radial-gradient(circle at 85% 12%, #cffafe 0%, transparent 24%),
       radial-gradient(circle at 70% 85%, #dcfce7 0%, transparent 24%),
       linear-gradient(135deg, var(--bg-a), var(--bg-b) 46%, var(--bg-c));
-    min-height: 100vh;
+  }
+
+  #root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   input[type='date'],
@@ -91,6 +97,21 @@
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
   }
 }
+
+  /* スクロールバーを細く目立たなく */
+  main::-webkit-scrollbar {
+    width: 4px;
+  }
+  main::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  main::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+  }
+  main::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
+  }
 
 @layer utilities {
   .animate-slide-in {

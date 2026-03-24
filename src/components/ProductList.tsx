@@ -349,6 +349,12 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
           >
             未着一覧
           </button>
+          <button
+            onClick={() => setListTab('janInventory')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${listTab === 'janInventory' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+          >
+            JAN在庫
+          </button>
         </div>
         )}
 

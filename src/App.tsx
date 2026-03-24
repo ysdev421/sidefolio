@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { BarChart3, Boxes, ChevronDown, History, List, Plus, Settings, Truck } from 'lucide-react';
+import { BarChart3, ChevronDown, History, List, Plus, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -34,7 +34,7 @@ const SaleHistoryScreen = lazy(() =>
   import('@/components/SaleHistoryScreen').then((m) => ({ default: m.SaleHistoryScreen }))
 );
 
-type Screen = 'summary' | 'list' | 'janInventory' | 'sale' | 'saleHistory';
+type Screen = 'summary' | 'list' | 'sale' | 'saleHistory';
 type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager';
 
 function App() {
@@ -168,10 +168,10 @@ function App() {
   })();
 
   return (
-    <div className="min-h-screen">
+    <div className="flex flex-col h-full">
       <Header userName={user.displayName || user.email} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+      <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
         <section className="mb-5 relative" ref={managementMenuRef}>
           <button
             onClick={() => setShowManagementMenu((v) => !v)}
@@ -308,17 +308,18 @@ function App() {
             </section>
           ) : screen === 'list' ? (
             <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-slate-800">在庫一覧</h2>
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  onMouseEnter={() => { void loadAddProductForm(); }}
+                  className="inline-flex items-center gap-1.5 bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-md hover:opacity-90 active:scale-95 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  商品登録
+                </button>
+              </div>
               <ProductList products={filteredProducts} userId={user.id} onDelete={deleteProductData} initialListTab="inventory" />
-            </section>
-          ) : screen === 'janInventory' ? (
-            <section>
-              <ProductList
-                products={filteredProducts}
-                userId={user.id}
-                onDelete={deleteProductData}
-                initialListTab="janInventory"
-                hideTabSelector
-              />
             </section>
           ) : screen === 'sale' ? (
             <section>
@@ -334,70 +335,32 @@ function App() {
         {filteredProducts.length === 0 && (
           <div className="glass-panel text-center py-10 mt-8">
             <p className="text-lg font-semibold text-slate-800">まだ商品データがありません</p>
-            <p className="text-soft text-sm mt-2">右下のボタンから最初の商品を登録してください</p>
+            <p className="text-soft text-sm mt-2">上の「商品登録」ボタンから最初の商品を登録してください</p>
           </div>
         )}
       </main>
 
-      <button
-        onClick={() => setShowAddForm(true)}
-        onMouseEnter={() => { void loadAddProductForm(); }}
-        onTouchStart={() => { void loadAddProductForm(); }}
-        onFocus={() => { void loadAddProductForm(); }}
-        className="fixed right-4 bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-8 sm:right-8 z-30 bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-600 text-white rounded-2xl p-4 shadow-2xl transition hover:scale-105 active:scale-95 flex items-center justify-center"
-        title="商品を追加"
-        style={{ display: appView === 'system' ? undefined : 'none' }}
-      >
-        <Plus className="w-7 h-7" />
-      </button>
-
-      <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-[96vw] max-w-lg">
-        <div className="glass-panel p-1.5 flex items-center gap-1 flex-nowrap">
-          <button
-            onClick={() => { setAppView('system'); setScreen('summary'); }}
-            className={`px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1 sm:gap-2 transition ${
-              appView === 'system' && screen === 'summary' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            サマリー
-          </button>
-          <button
-            onClick={() => { setAppView('system'); setScreen('list'); }}
-            className={`px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1 sm:gap-2 transition ${
-              appView === 'system' && screen === 'list' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            在庫
-          </button>
-          <button
-            onClick={() => { setAppView('system'); setScreen('sale'); }}
-            className={`px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1 sm:gap-2 transition ${
-              appView === 'system' && screen === 'sale' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            売却
-          </button>
-          <button
-            onClick={() => { setAppView('system'); setScreen('saleHistory'); }}
-            className={`px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1 sm:gap-2 transition ${
-              appView === 'system' && screen === 'saleHistory' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            売却履歴
-          </button>
-          <button
-            onClick={() => { setAppView('system'); setScreen('janInventory'); }}
-            className={`px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1 sm:gap-2 transition ${
-              appView === 'system' && screen === 'janInventory' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-            }`}
-          >
-            <Boxes className="w-4 h-4" />
-            JAN在庫
-          </button>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-t border-slate-200/60" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="flex items-stretch">
+          {([
+            { id: 'summary' as const, label: 'サマリー', icon: BarChart3 },
+            { id: 'list' as const, label: '在庫', icon: List },
+            { id: 'sale' as const, label: '売却', icon: Truck },
+            { id: 'saleHistory' as const, label: '売却履歴', icon: History },
+          ] as const).map(({ id, label, icon: Icon }) => {
+            const active = appView === 'system' && screen === id;
+            return (
+              <button
+                key={id}
+                onClick={() => { setAppView('system'); setScreen(id); }}
+                className="relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors active:opacity-60"
+              >
+                <Icon className={`w-5 h-5 transition-colors ${active ? 'text-sky-500' : 'text-slate-400'}`} strokeWidth={active ? 2.5 : 1.8} />
+                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-sky-500' : 'text-slate-400'}`}>{label}</span>
+                {active && <span className="absolute bottom-0 h-0.5 w-8 bg-sky-500 rounded-full" />}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
