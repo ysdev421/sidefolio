@@ -171,7 +171,7 @@ function App() {
     <div className="min-h-screen">
       <Header userName={user.displayName || user.email} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <section className="mb-5 relative" ref={managementMenuRef}>
           <button
             onClick={() => setShowManagementMenu((v) => !v)}
@@ -351,7 +351,7 @@ function App() {
         <Plus className="w-7 h-7" />
       </button>
 
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[96vw] max-w-lg">
+      <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-[96vw] max-w-lg">
         <div className="glass-panel p-1.5 flex items-center gap-1 flex-nowrap">
           <button
             onClick={() => { setAppView('system'); setScreen('summary'); }}

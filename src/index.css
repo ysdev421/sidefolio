@@ -15,9 +15,19 @@
 
   html {
     scroll-behavior: smooth;
+    /* ノッチ・ホームバー領域を確保 */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   body {
+    /* タップ時のハイライト削除 */
+    -webkit-tap-highlight-color: transparent;
+    /* テキスト選択禁止（UIパーツ） */
+    -webkit-touch-callout: none;
+    /* スクロール慣性 */
+    -webkit-overflow-scrolling: touch;
     color: var(--ink-strong);
     background:
       radial-gradient(circle at 10% 10%, #dbeafe 0%, transparent 28%),
