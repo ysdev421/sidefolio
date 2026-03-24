@@ -33,7 +33,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
     purchasePrice: '0',
     point: '0',
     purchaseDate: new Date().toISOString().split('T')[0],
-    purchaseLocation: 'メルカリ',
+    purchaseLocation: '',
     memo: '',
   });
 
