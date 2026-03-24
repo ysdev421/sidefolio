@@ -57,10 +57,15 @@ export async function getUserProducts(userId: string): Promise<Product[]> {
   const q = query(collection(db, 'products'), where('userId', '==', userId));
   const querySnapshot = await getDocs(q);
 
-  return querySnapshot.docs.map((snapshot: any) => ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Product, 'id'>),
-  }));
+  return querySnapshot.docs.map((snapshot: any) => {
+    const data = snapshot.data() as any;
+    return {
+      ...data,
+      id: snapshot.id,
+      createdAt: toIso(data.createdAt),
+      updatedAt: toIso(data.updatedAt),
+    };
+  });
 }
 
 export async function addSaleRecord(
@@ -1056,13 +1061,13 @@ export async function addExpenseToFirestore(
 }
 
 export async function getUserExpenses(userId: string, year?: number): Promise<Expense[]> {
-  let q = query(collection(db, 'expenses'), where('userId', '==', userId));
+  const q = query(collection(db, 'expenses'), where('userId', '==', userId));
   const snap = await getDocs(q);
-  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Expense));
-  if (!year) return all.sort((a, b) => b.date.localeCompare(a.date));
+  const all: Expense[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Expense));
+  if (!year) return all.sort((a: Expense, b: Expense) => b.date.localeCompare(a.date));
   return all
-    .filter((e) => e.date.startsWith(`${year}-`))
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .filter((e: Expense) => e.date.startsWith(`${year}-`))
+    .sort((a: Expense, b: Expense) => b.date.localeCompare(a.date));
 }
 
 export async function deleteExpenseFromFirestore(id: string): Promise<void> {
