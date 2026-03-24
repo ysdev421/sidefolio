@@ -378,7 +378,7 @@ function App() {
             }`}
           >
             <Truck className="w-4 h-4" />
-            一括売却
+            売却
           </button>
           <button
             onClick={() => { setAppView('system'); setScreen('saleHistory'); }}
