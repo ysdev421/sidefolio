@@ -34,7 +34,7 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
   const [toDate, setToDate] = useState('');
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('all');
   const [sortKey, setSortKey] = useState<SortKey>('purchaseDateDesc');
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [showDateRange, setShowDateRange] = useState(false);
 
   useEffect(() => {
