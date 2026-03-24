@@ -192,57 +192,42 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">ステータス</label>
-            {product.status === 'sold' ? (
-              <p className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                売却済み（変更不可）
-              </p>
-            ) : (
-              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, status: 'pending' })}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
-                    formData.status === 'pending' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  未着
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, status: 'inventory' })}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
-                    formData.status === 'inventory' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  在庫
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <RichDatePicker
-                label="購入日"
-                value={formData.purchaseDate}
-                onChange={(v) => setFormData({ ...formData, purchaseDate: v })}
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">ステータス</label>
+              {product.status === 'sold' ? (
+                <p className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                  売却済み（変更不可）
+                </p>
+              ) : (
+                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, status: 'pending' })}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                      formData.status === 'pending' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    未着
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, status: 'inventory' })}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${
+                      formData.status === 'inventory' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    在庫
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">総数量</label>
-              <NumericInput
-                integer
-                value={formData.quantityTotal}
-                readOnly
-                className="input-field w-20 text-center bg-slate-50 text-slate-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">残数</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                残数
+                <span className="ml-1 text-xs text-slate-400 font-normal">/ 総{formData.quantityTotal}</span>
+              </label>
               <div className="inline-flex items-center gap-1.5">
                 <button
                   type="button"
@@ -283,6 +268,14 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                   +
                 </button>
               </div>
+            </div>
+
+            <div>
+              <RichDatePicker
+                label="購入日"
+                value={formData.purchaseDate}
+                onChange={(v) => setFormData({ ...formData, purchaseDate: v })}
+              />
             </div>
 
             <div>
