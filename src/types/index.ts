@@ -13,6 +13,7 @@ export interface Product {
   salePrice?: number;
   saleLocation?: string;
   saleDate?: string;
+  memo?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +58,18 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  createdAt: string;
+}
+
+export type ExpenseCategory = '梱包資材' | '送料' | '交通費' | '通信費' | 'ツール・サブスク' | 'その他';
+
+export interface Expense {
+  id: string;
+  userId: string;
+  date: string;
+  amount: number;
+  category: ExpenseCategory;
+  memo: string;
   createdAt: string;
 }
 

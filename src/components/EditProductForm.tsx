@@ -29,6 +29,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     salePrice: product.salePrice ? String(product.salePrice) : '',
     saleLocation: product.saleLocation || '',
     saleDate: product.saleDate || '',
+    memo: product.memo || '',
   });
   const [error, setError] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -72,6 +73,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     salePrice: formData.salePrice,
     saleLocation: formData.saleLocation,
     saleDate: formData.saleDate,
+    memo: formData.memo,
   }) !== JSON.stringify({
     status: product.status,
     quantityAvailable: String(product.quantityAvailable || product.quantityTotal || 1),
@@ -82,6 +84,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     salePrice: product.salePrice ? String(product.salePrice) : '',
     saleLocation: product.saleLocation || '',
     saleDate: product.saleDate || '',
+    memo: product.memo || '',
   });
 
   useEffect(() => {
@@ -106,6 +109,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
         point: parseFloat(formData.point) || 0,
         purchaseDate: formData.purchaseDate,
         purchaseLocation: formData.purchaseLocation,
+        memo: formData.memo.trim() || undefined,
       };
 
       if (formData.status === 'sold') {
@@ -274,6 +278,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">購入金額合計</label>
+                <p className="text-[11px] text-slate-500 mb-1">ポイント利用分も含めた合計額</p>
                 <input
                   type="number"
                   required
@@ -305,6 +310,17 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 <p className="text-xs text-slate-500 mt-1">購入金額 - 付与ポイント</p>
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">メモ</label>
+            <textarea
+              value={formData.memo}
+              onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+              className="input-field resize-none"
+              rows={2}
+              placeholder="任意（仕入れ条件・状態など）"
+            />
           </div>
 
           {formData.status === 'sold' && (

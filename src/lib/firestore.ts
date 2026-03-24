@@ -16,7 +16,7 @@
   where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
+import type { Expense, ExpenseCategory, Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
 
 export async function addProductToFirestore(
   userId: string,
@@ -1039,6 +1039,41 @@ export async function cancelSaleBatchInFirestore(
 
   await wb.commit();
   return { batchId, revertedProducts };
+}
+
+// ─── 経費管理 ───────────────────────────────────────────
+
+export async function addExpenseToFirestore(
+  userId: string,
+  data: { date: string; amount: number; category: ExpenseCategory; memo: string }
+): Promise<string> {
+  const docRef = await addDoc(collection(db, 'expenses'), {
+    ...data,
+    userId,
+    createdAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export async function getUserExpenses(userId: string, year?: number): Promise<Expense[]> {
+  let q = query(collection(db, 'expenses'), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Expense));
+  if (!year) return all.sort((a, b) => b.date.localeCompare(a.date));
+  return all
+    .filter((e) => e.date.startsWith(`${year}-`))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function deleteExpenseFromFirestore(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'expenses', id));
+}
+
+export async function updateExpenseInFirestore(
+  id: string,
+  data: Partial<{ date: string; amount: number; category: ExpenseCategory; memo: string }>
+): Promise<void> {
+  await updateDoc(doc(db, 'expenses', id), { ...data, updatedAt: Timestamp.now() });
 }
 
 

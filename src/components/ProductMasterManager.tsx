@@ -7,11 +7,12 @@ interface ProductMasterManagerProps {
   userId: string;
   initialJanCode?: string;
   initialProductName?: string;
+  onSaved?: () => void;
 }
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
-export function ProductMasterManager({ userId, initialJanCode, initialProductName }: ProductMasterManagerProps) {
+export function ProductMasterManager({ userId, initialJanCode, initialProductName, onSaved }: ProductMasterManagerProps) {
   const [masters, setMasters] = useState<ProductMaster[]>([]);
   const [query, setQuery] = useState('');
   const [janCode, setJanCode] = useState(initialJanCode ?? '');
@@ -72,8 +73,10 @@ export function ProductMasterManager({ userId, initialJanCode, initialProductNam
       setProductName('');
       setEditingMasterId(null);
       setEditingJanCode('');
-      setMessage(editingMasterId ? '商品マスタを更新しました' : '商品マスタを保存しました');
+      const wasNew = !editingMasterId;
+      setMessage(wasNew ? '商品マスタを保存しました' : '商品マスタを更新しました');
       await load();
+      if (wasNew && onSaved) onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存に失敗しました');
     } finally {

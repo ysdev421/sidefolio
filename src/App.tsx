@@ -1,5 +1,5 @@
-﻿import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { BarChart3, ChevronDown, History, List, Plus, Settings, Truck } from 'lucide-react';
+﻿import { Suspense, lazy, useEffect, useState } from 'react';
+import { BarChart3, BookOpen, ChevronLeft, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -33,9 +33,15 @@ const AdminJanManager = lazy(() =>
 const SaleHistoryScreen = lazy(() =>
   import('@/components/SaleHistoryScreen').then((m) => ({ default: m.SaleHistoryScreen }))
 );
+const ExpenseManager = lazy(() =>
+  import('@/components/ExpenseManager').then((m) => ({ default: m.ExpenseManager }))
+);
+const AnnualSummaryScreen = lazy(() =>
+  import('@/components/AnnualSummaryScreen').then((m) => ({ default: m.AnnualSummaryScreen }))
+);
 
-type Screen = 'summary' | 'list' | 'sale' | 'saleHistory';
-type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager';
+type Screen = 'summary' | 'list' | 'sale' | 'saleHistory' | 'admin';
+type AppView = 'system' | 'purchaseLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary';
 
 function App() {
   const { authLoading } = useAuth();
@@ -44,23 +50,6 @@ function App() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [masterInitial, setMasterInitial] = useState<{ janCode: string; productName: string } | null>(null);
-  const [showManagementMenu, setShowManagementMenu] = useState(false);
-  const managementMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showManagementMenu) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      if (managementMenuRef.current && !managementMenuRef.current.contains(e.target as Node)) {
-        setShowManagementMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [showManagementMenu]);
   useEffect(() => {
     if (!user) return;
     const timer = window.setTimeout(() => {
@@ -173,88 +162,66 @@ function App() {
       <Header userName={user.displayName || user.email} />
 
       <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-        <section className="mb-5 relative" ref={managementMenuRef}>
-          <button
-            onClick={() => setShowManagementMenu((v) => !v)}
-            className="glass-panel px-4 py-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-800 hover:bg-white/80 transition"
-          >
-            <Settings className="w-4 h-4" />
-            管理メニュー
-            <ChevronDown className={`w-4 h-4 transition ${showManagementMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showManagementMenu && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowManagementMenu(false)} />
-              <div className="absolute mt-2 w-64 glass-panel p-2 z-20">
-              <button
-                onClick={() => {
-                  setAppView('purchaseLocationMaster');
-                  setShowManagementMenu(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                  appView === 'purchaseLocationMaster' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                }`}
-              >
-                購入場所マスタ管理
-              </button>
-              <button
-                onClick={() => {
-                  setAppView('statusBatchManager');
-                  setShowManagementMenu(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                  appView === 'statusBatchManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                }`}
-              >
-                ステータス一括管理
-              </button>
-              <button
-                onClick={() => {
-                  setAppView('productMasterManager');
-                  setShowManagementMenu(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                  appView === 'productMasterManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                }`}
-              >
-                商品マスタ管理
-              </button>
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    setAppView('adminJanManager');
-                    setShowManagementMenu(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                    appView === 'adminJanManager' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-white/70'
-                  }`}
-                >
-                  管理者: JAN抽出/投入
-                </button>
-              )}
-            </div>
-            </>
-          )}
-        </section>
-
         <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-600">読み込み中...</div>}>
-          {appView === 'purchaseLocationMaster' ? (
-            <PurchaseLocationMaster userId={user.id} />
-          ) : appView === 'statusBatchManager' ? (
-            <StatusBatchManager
-              products={filteredProducts}
-              onBulkUpdate={bulkUpdateStatus}
-            />
-          ) : appView === 'productMasterManager' ? (
-            <ProductMasterManager
-              key={masterInitial ? `${masterInitial.janCode}-${masterInitial.productName}` : 'default'}
-              userId={user.id}
-              initialJanCode={masterInitial?.janCode}
-              initialProductName={masterInitial?.productName}
-            />
-          ) : appView === 'adminJanManager' && isAdmin ? (
-            <AdminJanManager />
+          {screen === 'admin' && appView !== 'system' ? (
+            <>
+              <button
+                onClick={() => setAppView('system')}
+                className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                管理メニューに戻る
+              </button>
+              {appView === 'purchaseLocationMaster' ? (
+                <PurchaseLocationMaster userId={user.id} />
+              ) : appView === 'statusBatchManager' ? (
+                <StatusBatchManager products={filteredProducts} onBulkUpdate={bulkUpdateStatus} />
+              ) : appView === 'productMasterManager' ? (
+                <ProductMasterManager
+                  key={masterInitial ? `${masterInitial.janCode}-${masterInitial.productName}` : 'default'}
+                  userId={user.id}
+                  initialJanCode={masterInitial?.janCode}
+                  initialProductName={masterInitial?.productName}
+                  onSaved={masterInitial ? () => {
+                    setMasterInitial(null);
+                    setScreen('list');
+                    setAppView('system');
+                    setShowAddForm(true);
+                  } : undefined}
+                />
+              ) : appView === 'expenseManager' ? (
+                <ExpenseManager userId={user.id} />
+              ) : appView === 'annualSummary' ? (
+                <AnnualSummaryScreen userId={user.id} products={filteredProducts} />
+              ) : appView === 'adminJanManager' && isAdmin ? (
+                <AdminJanManager />
+              ) : null}
+            </>
+          ) : screen === 'admin' ? (
+            <section>
+              <h2 className="text-base font-bold text-slate-800 mb-4">管理メニュー</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {([
+                  { view: 'purchaseLocationMaster' as const, label: '購入場所\nマスタ管理', icon: MapPin, color: 'from-sky-100 to-cyan-100 text-sky-600' },
+                  { view: 'statusBatchManager' as const, label: 'ステータス\n一括管理', icon: RefreshCw, color: 'from-violet-100 to-purple-100 text-violet-600' },
+                  { view: 'productMasterManager' as const, label: '商品マスタ\n管理', icon: BookOpen, color: 'from-emerald-100 to-green-100 text-emerald-600' },
+                  { view: 'expenseManager' as const, label: '経費管理', icon: Receipt, color: 'from-rose-100 to-pink-100 text-rose-600' },
+                  { view: 'annualSummary' as const, label: '年間サマリー\n（確定申告用）', icon: FileText, color: 'from-amber-100 to-orange-100 text-amber-600' },
+                  ...(isAdmin ? [{ view: 'adminJanManager' as const, label: 'JAN抽出/投入\n（管理者）', icon: Database, color: 'from-slate-100 to-slate-200 text-slate-600' }] : []),
+                ]).map(({ view, label, icon: Icon, color }) => (
+                  <button
+                    key={view}
+                    onClick={() => setAppView(view)}
+                    className="glass-panel p-4 flex flex-col items-center gap-3 hover:bg-white/90 active:scale-95 transition text-center"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-700 whitespace-pre-line leading-tight">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ) : screen === 'summary' ? (
             <section>
               <div className="mb-4">
@@ -353,8 +320,9 @@ function App() {
             { id: 'list' as const, label: '在庫', icon: List },
             { id: 'sale' as const, label: '売却', icon: Truck },
             { id: 'saleHistory' as const, label: '売却履歴', icon: History },
+            { id: 'admin' as const, label: '管理', icon: Settings },
           ] as const).map(({ id, label, icon: Icon }) => {
-            const active = appView === 'system' && screen === id;
+            const active = screen === id;
             return (
               <button
                 key={id}
@@ -378,6 +346,7 @@ function App() {
             onGoToMaster={(janCode, productName) => {
               setShowAddForm(false);
               setMasterInitial({ janCode, productName });
+              setScreen('admin');
               setAppView('productMasterManager');
             }}
           />

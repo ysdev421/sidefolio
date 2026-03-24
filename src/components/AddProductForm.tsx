@@ -33,12 +33,14 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
     point: '0',
     purchaseDate: new Date().toISOString().split('T')[0],
     purchaseLocation: 'メルカリ',
+    memo: '',
   });
 
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [janHint, setJanHint] = useState('');
   const [janNotFound, setJanNotFound] = useState(false);
+  const [extraPoints, setExtraPoints] = useState<string[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
@@ -196,7 +198,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
 
       const qty = Math.max(1, parseInt(formData.quantity, 10) || 1);
       const purchasePrice = parseFloat(formData.purchasePrice);
-      const point = parseFloat(formData.point) || 0;
+      const point = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
 
       await createProduct({
         ...(normalizedJan ? { janCode: normalizedJan } : {}),
@@ -208,6 +210,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
         purchaseDate: formData.purchaseDate,
         purchaseLocation: formData.purchaseLocation,
         status: formData.initialStatus,
+        ...(formData.memo.trim() ? { memo: formData.memo.trim() } : {}),
       });
 
       await upsertProductTemplate(userId, {
@@ -236,8 +239,10 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
         point: '0',
         purchaseDate: new Date().toISOString().split('T')[0],
         purchaseLocation: purchaseLocations[0] || 'メルカリ',
+        memo: '',
       });
       setJanHint('');
+      setExtraPoints([]);
       onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました');
@@ -298,7 +303,10 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                   {janNotFound && onGoToMaster && (
                     <button
                       type="button"
-                      onClick={() => onGoToMaster(formData.janCode, kaitoriLookup)}
+                      onClick={() => {
+                        const isJan = /^\d{8,13}$/.test(kaitoriLookup.trim());
+                        onGoToMaster(formData.janCode, isJan ? '' : kaitoriLookup.trim());
+                      }}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700 underline underline-offset-2"
                     >
                       <ExternalLink className="w-3 h-3" />
@@ -441,6 +449,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">購入金額合計 *</label>
+                <p className="text-[11px] text-slate-500 mb-1">ポイント利用分も含めた合計額</p>
                 <input
                   type="number"
                   value={formData.purchasePrice}
@@ -460,6 +469,41 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                   className="input-field"
                   placeholder="0"
                 />
+                {extraPoints.map((v, i) => (
+                  <div key={i} className="flex items-center gap-1 mt-1">
+                    <span className="text-slate-400 text-xs font-bold">+</span>
+                    <input
+                      type="number"
+                      value={v}
+                      onChange={(e) => {
+                        const next = [...extraPoints];
+                        next[i] = e.target.value;
+                        setExtraPoints(next);
+                      }}
+                      className="input-field py-1.5 text-sm"
+                      placeholder="追加P（スクラッチ等）"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setExtraPoints((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-slate-400 hover:text-rose-500 transition text-xs px-1"
+                    >✕</button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setExtraPoints((prev) => [...prev, ''])}
+                  className="mt-1.5 text-xs text-sky-600 hover:text-sky-700 font-semibold"
+                >
+                  ＋ 追加P入力（スクラッチ等）
+                </button>
+                {extraPoints.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    合計: <span className="font-semibold text-slate-700">
+                      {(parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0)} P
+                    </span>
+                  </p>
+                )}
               </div>
               <div className="rounded-xl bg-white/70 border border-white/70 p-3 text-sm">
                 <p className="text-slate-700">
@@ -467,7 +511,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                   <span className="ml-2 font-bold text-slate-900">
                     {(() => {
                       const purchase = parseFloat(formData.purchasePrice) || 0;
-                      const earned = parseFloat(formData.point) || 0;
+                      const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
                       return `${purchase - earned} 円`;
                     })()}
                   </span>
@@ -477,6 +521,17 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                 </p>
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">メモ</label>
+            <textarea
+              value={formData.memo}
+              onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+              className="input-field resize-none"
+              rows={2}
+              placeholder="任意（仕入れ条件・状態など）"
+            />
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
