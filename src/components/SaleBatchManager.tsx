@@ -32,7 +32,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const candidates = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products
-      .filter((p) => p.status !== 'sold' && (p.quantityAvailable ?? p.quantityTotal ?? 1) > 0)
+      .filter((p) => p.status === 'inventory' && (p.quantityAvailable ?? p.quantityTotal ?? 1) > 0)
       .filter((p) => {
         if (!q) return true;
         const text = [p.productName, p.purchaseLocation, p.janCode || ''].join(' ').toLowerCase();
