@@ -19,7 +19,6 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [saleMethod, setSaleMethod] = useState<'来店' | '郵送'>('来店');
   const [saleLocation, setSaleLocation] = useState<(typeof SALE_LOCATIONS)[number]>(SALE_LOCATIONS[0]);
   const [receivedPoint, setReceivedPoint] = useState('');
-  const [pointRate, setPointRate] = useState('1');
   const [memo, setMemo] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [productSalePrices, setProductSalePrices] = useState<Record<string, string>>({});
@@ -65,8 +64,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
     return sum + v;
   }, 0);
   const bonusPointValue = Math.max(0, Math.round(parseFloat(receivedPoint) || 0));
-  const pointRateValue = Math.max(0, parseFloat(pointRate) || 1);
-  const revenue = basePurchaseAmountValue + Math.round(bonusPointValue * pointRateValue);
+  const revenue = basePurchaseAmountValue + bonusPointValue;
   const profit = revenue - selectedEffectiveCost;
   const pointProfit = revenue - selectedActualCost;
 
@@ -159,7 +157,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         saleMethod,
         receivedCash: basePurchaseAmountValue,
         receivedPoint: bonusPointValue,
-        pointRate: pointRateValue,
+        pointRate: 1,
         productBasePrices,
         productSaleQtys: productSaleQtysNum,
         memo: memo.trim(),
@@ -222,12 +220,8 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
             <input type="number" min={0} value={basePurchaseAmountValue} readOnly className="input-field bg-slate-50 text-slate-700" />
           </div>
           <div>
-            <label className="block text-xs text-slate-600 mb-1">上乗せポイント</label>
+            <label className="block text-xs text-slate-600 mb-1">上乗せP（円）</label>
             <input type="number" min={0} value={receivedPoint} onChange={(e) => setReceivedPoint(e.target.value)} className="input-field" placeholder="0" />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">上乗せP換算(円)</label>
-            <input type="number" min={0} step="0.01" value={pointRate} onChange={(e) => setPointRate(e.target.value)} className="input-field" />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-xs text-slate-600 mb-1">メモ</label>
@@ -240,7 +234,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           <p className="text-slate-700">最終受取: <span className="font-semibold">{formatCurrency(revenue)}</span></p>
           <p className="text-slate-700">利益: <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(profit)}</span></p>
           <p className="text-slate-700">P利益: <span className={`font-semibold ${pointProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(pointProfit)}</span></p>
-          <p className="text-xs text-slate-500 mt-1">最終受取 = 買取総額 + (上乗せポイント × 換算レート)</p>
+          <p className="text-xs text-slate-500 mt-1">最終受取 = 買取総額 + 上乗せP（円）</p>
         </div>
 
         {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
