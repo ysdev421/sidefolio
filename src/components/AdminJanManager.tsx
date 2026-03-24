@@ -1,6 +1,7 @@
 ﻿import { useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { Download, Loader2, Upload } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import { collection, doc, documentId, getDoc, getDocs, limit, orderBy, query, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { addProductToFirestore, getUserProductTemplates, upsertJanMaster } from '@/lib/firestore';
@@ -438,8 +439,8 @@ export function AdminJanManager() {
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm text-slate-700">
             巡回ページ数
-            <input
-              type="number"
+            <NumericInput
+              integer
               min={1}
               max={MAX_PAGES_HARD}
               value={maxPages}
@@ -449,8 +450,8 @@ export function AdminJanManager() {
           </label>
           <label className="text-sm text-slate-700">
             間隔(ms)
-            <input
-              type="number"
+            <NumericInput
+              integer
               min={200}
               max={5000}
               value={delayMs}

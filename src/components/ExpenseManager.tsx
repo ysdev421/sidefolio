@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import {
   addExpenseToFirestore,
   deleteExpenseFromFirestore,
@@ -138,8 +139,8 @@ export function ExpenseManager({ userId }: ExpenseManagerProps) {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">金額（円）</label>
-            <input
-              type="number"
+            <NumericInput
+              integer
               min={1}
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}

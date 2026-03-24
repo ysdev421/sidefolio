@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Copy, Loader, Plus, Save, Trash2, X } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
 import { getPurchaseLocationUsageCounts, getUserPurchaseLocations } from '@/lib/firestore';
@@ -233,8 +234,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">総数量</label>
-              <input
-                type="number"
+              <NumericInput
+                integer
                 value={formData.quantityTotal}
                 readOnly
                 className="input-field w-20 text-center bg-slate-50 text-slate-600"
@@ -257,8 +258,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 >
                   -
                 </button>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   min={0}
                   value={formData.quantityAvailable}
                   onChange={(e) =>
@@ -306,8 +307,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">購入金額合計</label>
                 <p className="text-[11px] text-slate-500 mb-1">ポイント利用分も含めた合計額</p>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   required
                   value={formData.purchasePrice}
                   onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
@@ -316,8 +317,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">付与ポイント（通常）</label>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   value={formData.point}
                   onChange={(e) => setFormData({ ...formData, point: e.target.value })}
                   className="input-field"
@@ -325,8 +326,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 {extraPoints.map((v, i) => (
                   <div key={i} className="flex items-center gap-1 mt-1">
                     <span className="text-slate-400 text-xs font-bold">+</span>
-                    <input
-                      type="number"
+                    <NumericInput
+                      integer
                       value={v}
                       onChange={(e) => {
                         const next = [...extraPoints];
@@ -392,8 +393,8 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">売却価格</label>
-                  <input
-                    type="number"
+                  <NumericInput
+                    integer
                     value={formData.salePrice}
                     onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
                     className="input-field"

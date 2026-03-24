@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, ChevronRight, Loader2, X } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import {
   cancelSaleBatchInFirestore,
   getSaleBatchDetail,
@@ -250,8 +251,8 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                             <div className="flex items-center gap-2 mt-1.5">
                               <span className="text-xs text-slate-500">仕入: {formatCurrency(item.purchasePrice)}</span>
                               <span className="text-xs text-slate-400">元: {formatCurrency(item.allocatedSalePrice)}</span>
-                              <input
-                                type="number"
+                              <NumericInput
+                                integer
                                 min={0}
                                 value={editPrices[item.productId] ?? ''}
                                 onChange={(e) => setEditPrices((prev) => ({ ...prev, [item.productId]: e.target.value }))}

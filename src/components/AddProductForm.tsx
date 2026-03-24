@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Camera, ExternalLink, Loader, Plus, X } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import { useProducts } from '@/hooks/useProducts';
 import {
   getPurchaseLocationUsageCounts,
@@ -402,8 +403,8 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                 >
                   -
                 </button>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   min={1}
                   value={formData.quantity}
                   onChange={(e) =>
@@ -452,8 +453,8 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">購入金額合計 *</label>
                 <p className="text-[11px] text-slate-500 mb-1">ポイント利用分も含めた合計額</p>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   value={formData.purchasePrice}
                   onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
                   required
@@ -464,8 +465,8 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">付与ポイント</label>
-                <input
-                  type="number"
+                <NumericInput
+                  integer
                   value={formData.point}
                   onChange={(e) => setFormData({ ...formData, point: e.target.value })}
                   className="input-field"
@@ -474,8 +475,8 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                 {extraPoints.map((v, i) => (
                   <div key={i} className="flex items-center gap-1 mt-1">
                     <span className="text-slate-400 text-xs font-bold">+</span>
-                    <input
-                      type="number"
+                    <NumericInput
+                      integer
                       value={v}
                       onChange={(e) => {
                         const next = [...extraPoints];

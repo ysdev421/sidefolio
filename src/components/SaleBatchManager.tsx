@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckSquare, Loader2 } from 'lucide-react';
+import { NumericInput } from '@/components/NumericInput';
 import { confirmSaleBatchInFirestore } from '@/lib/firestore';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { useStore } from '@/lib/store';
@@ -220,7 +221,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           </div>
           <div>
             <label className="block text-xs text-slate-600 mb-1">買取総額</label>
-            <input type="number" min={0} value={basePurchaseAmountValue} readOnly className="input-field bg-slate-50 text-slate-700" />
+            <NumericInput integer min={0} value={basePurchaseAmountValue} readOnly className="input-field bg-slate-50 text-slate-700" />
           </div>
           {saleMethod === '郵送' && (
             <div className="sm:col-span-2 lg:col-span-4">
@@ -239,8 +240,8 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
                   ))}
                 </div>
                 {shippingType === '実費' && (
-                  <input
-                    type="number"
+                  <NumericInput
+                    integer
                     min={0}
                     value={shippingCost}
                     onChange={(e) => setShippingCost(e.target.value)}
@@ -256,7 +257,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           )}
           <div>
             <label className="block text-xs text-slate-600 mb-1">上乗せP（円）</label>
-            <input type="number" min={0} value={receivedPoint} onChange={(e) => setReceivedPoint(e.target.value)} className="input-field" placeholder="0" />
+            <NumericInput integer min={0} value={receivedPoint} onChange={(e) => setReceivedPoint(e.target.value)} className="input-field" placeholder="0" />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-xs text-slate-600 mb-1">メモ</label>
@@ -338,8 +339,8 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
                         )}
                         <div className="flex-1 min-w-[140px] max-w-[180px]">
                           <label className="block text-[11px] text-slate-600 mb-1">買取価格</label>
-                          <input
-                            type="number"
+                          <NumericInput
+                            integer
                             min={0}
                             value={productSalePrices[p.id] ?? ''}
                             onChange={(e) => setProductSalePrices((prev) => ({ ...prev, [p.id]: e.target.value }))}
