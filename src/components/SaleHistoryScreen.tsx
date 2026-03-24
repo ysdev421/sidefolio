@@ -245,10 +245,18 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                               />
                             </div>
                           ) : (
-                            <div className="flex gap-3 mt-1 text-xs text-slate-600">
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-600">
                               <span>仕入: {formatCurrency(item.purchasePrice)}</span>
                               <span>売却額: {formatCurrency(item.allocatedSalePrice)}</span>
                               {item.allocatedPointValue > 0 && <span>P相当: {formatCurrency(item.allocatedPointValue)}</span>}
+                              {(() => {
+                                const profit = item.allocatedSalePrice + item.allocatedPointValue - item.purchasePrice;
+                                return (
+                                  <span className={`font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    利益: {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
