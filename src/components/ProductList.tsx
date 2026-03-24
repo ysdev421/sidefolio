@@ -280,6 +280,15 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
             <span className="text-xs text-soft mr-1">実質</span>
             <span className="font-semibold">{formatCurrency(getEffectiveCost(product))}</span>
           </p>
+          {!product.kaitoriPrice && product.janCode && product.status !== 'sold' && (
+            <>
+              <span className="text-slate-300 px-1" aria-hidden>|</span>
+              <p className="whitespace-nowrap">
+                <span className="text-xs text-soft mr-1">買取wiki</span>
+                <span className="text-xs text-slate-400">未取得</span>
+              </p>
+            </>
+          )}
           {product.kaitoriPrice && product.status !== 'sold' && (() => {
             const diff = product.kaitoriPrice - getEffectiveCost(product);
             return (
