@@ -77,6 +77,20 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     loadLocations();
   }, [userId]);
 
+  // キャッシュ済みの買取価格を自動表示
+  useEffect(() => {
+    if (!product.janCode) return;
+    try {
+      const raw = localStorage.getItem(`kaitoriPrice_${product.janCode}`);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (Date.now() - (data.cachedAt ?? 0) > 24 * 60 * 60 * 1000) return;
+      setKaitoriPrice(data.highestPrice);
+      setKaitoriSearchUrl(data.searchUrl);
+      setKaitoriCachedAt(data.cachedAt ?? null);
+    } catch { /* noop */ }
+  }, [product.janCode]);
+
   const isDirty = JSON.stringify({
     status: formData.status,
     quantityAvailable: formData.quantityAvailable,
