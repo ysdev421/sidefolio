@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx",
     "test": "vitest run",
-    "scrape:gamekaitori": "node scripts/scrape-gamekaitori-jan.cjs --dry-run"
+    "scrape:gamekaitori": "node scripts/scrape-gamekaitori-jan.cjs --dry-run",
+    "batch:kaitori-price": "node scripts/kaitori-price-batch.cjs",
+    "batch:kaitori-price:dry": "node scripts/kaitori-price-batch.cjs --dry-run"
   },
   "dependencies": {
     "@zxing/browser": "^0.1.5",

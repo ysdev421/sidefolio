@@ -1,0 +1,37 @@
+name: 買取価格一括取得バッチ
+
+on:
+  schedule:
+    # 毎日 17:00 UTC = 日本時間 02:00
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    # GitHub の画面から手動実行も可能
+
+jobs:
+  fetch-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 依存パッケージインストール
+        run: npm ci
+
+      - name: 買取価格バッチ実行
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          IMPORT_EMAIL: ${{ secrets.IMPORT_EMAIL }}
+          IMPORT_PASSWORD: ${{ secrets.IMPORT_PASSWORD }}
+        run: node scripts/kaitori-price-batch.cjs --interval=7000

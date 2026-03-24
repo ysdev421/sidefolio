@@ -1086,12 +1086,14 @@ export async function addKaitoriPriceHistory(
   janCode: string,
   productId: string,
   price: number,
+  source = 'kaitori.wiki',
 ): Promise<void> {
   await addDoc(collection(db, 'kaitoriPriceHistory'), {
     userId,
     janCode,
     productId,
     price,
+    source,
     recordedAt: Timestamp.now(),
   });
 }
@@ -1111,6 +1113,7 @@ export async function getKaitoriPriceHistory(janCode: string): Promise<KaitoriPr
         janCode: data.janCode,
         productId: data.productId,
         price: data.price,
+        source: data.source ?? 'kaitori.wiki',
         recordedAt: toIso(data.recordedAt),
       } satisfies KaitoriPriceHistory;
     })

@@ -82,6 +82,7 @@ export interface KaitoriPriceHistory {
   janCode: string;
   productId: string;
   price: number;
+  source: string;
   recordedAt: string;
 }
 
