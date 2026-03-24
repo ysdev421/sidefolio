@@ -722,7 +722,7 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
       });
       updatedProducts.push({
         id: p.id,
-        status: p.status,
+        status: p.status as 'pending' | 'sold' | 'inventory',
         quantityAvailable: remainingQty,
       });
     }

@@ -1,11 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckSquare, Loader2 } from 'lucide-react';
-import {
-  cancelSaleBatchInFirestore,
-  confirmSaleBatchInFirestore,
-  getUserRecentSaleBatches,
-  type SaleBatchSummary,
-} from '@/lib/firestore';
+import { confirmSaleBatchInFirestore } from '@/lib/firestore';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { useStore } from '@/lib/store';
 import { formatCurrency, getActualPayment, getEffectiveCost } from '@/lib/utils';
@@ -29,30 +24,10 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [productSalePrices, setProductSalePrices] = useState<Record<string, string>>({});
   const [productSaleQtys, setProductSaleQtys] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [cancelingBatchId, setCancelingBatchId] = useState('');
-  const [recentBatches, setRecentBatches] = useState<SaleBatchSummary[]>([]);
-  const [loadingBatches, setLoadingBatches] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [confirmTarget, setConfirmTarget] = useState<SaleBatchSummary | null>(null);
   const [errorModal, setErrorModal] = useState<{ title: string; detail: string } | null>(null);
   const updateProduct = useStore((state) => state.updateProduct);
-
-  const loadRecentBatches = async () => {
-    setLoadingBatches(true);
-    try {
-      const rows = await getUserRecentSaleBatches(userId, 20);
-      setRecentBatches(rows);
-    } catch {
-      setRecentBatches([]);
-    } finally {
-      setLoadingBatches(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadRecentBatches();
-  }, [userId]);
 
   const candidates = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -197,7 +172,6 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
       setReceivedPoint('');
       setMemo('');
       setMessage(`一括売却を保存しました（${result.updatedProducts.length}件）`);
-      await loadRecentBatches();
     } catch (e) {
       setErrorModal({
         title: '保存エラー',
@@ -205,27 +179,6 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
       });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const cancelBatch = async (batch: SaleBatchSummary) => {
-    setError('');
-    setMessage('');
-    setCancelingBatchId(batch.id);
-    try {
-      const result = await cancelSaleBatchInFirestore(userId, batch.id, 'ユーザー操作で取り消し');
-      result.revertedProducts.forEach((p) => {
-        updateProduct(p.id, p);
-      });
-      setMessage(`一括売却を取り消しました（${result.revertedProducts.length}件）`);
-      await loadRecentBatches();
-    } catch (e) {
-      setErrorModal({
-        title: '取り消しエラー',
-        detail: e instanceof Error ? e.message : '一括売却の取り消しに失敗しました',
-      });
-    } finally {
-      setCancelingBatchId('');
     }
   };
 
@@ -357,47 +310,6 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           )}
         </div>
       </div>
-
-      {confirmTarget && (
-        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="text-base font-bold text-slate-900">一括売却を取り消しますか？</h4>
-                <p className="text-sm text-slate-600 mt-1">
-                  {confirmTarget.saleDate} / {confirmTarget.saleLocation} / {confirmTarget.itemCount}件
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600">
-              売却情報を外して、対象商品を売却前のステータスに戻します。
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmTarget(null)}
-                className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const target = confirmTarget;
-                  setConfirmTarget(null);
-                  if (target) await cancelBatch(target);
-                }}
-                className="px-3 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
-              >
-                取り消す
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {errorModal && (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
