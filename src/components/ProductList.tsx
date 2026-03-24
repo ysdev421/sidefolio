@@ -2,7 +2,7 @@
 import { Copy, Search, SlidersHorizontal } from 'lucide-react';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { EditProductForm } from './EditProductForm';
-import { calculatePointProfit, calculateProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
+import { calculatePointProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface ProductListProps {
@@ -305,24 +305,10 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
           })()}
           {product.status === 'sold' && product.salePrice && (
             <>
-              <span className="text-slate-300 px-1" aria-hidden>
-                |
-              </span>
+              <span className="text-slate-300 px-1" aria-hidden>|</span>
               <p className="text-slate-800 whitespace-nowrap">
                 <span className="text-xs text-soft mr-1">売却</span>
                 <span className="font-semibold">{formatCurrency(product.salePrice)}</span>
-              </p>
-              <p className="whitespace-nowrap">
-                <span className="text-xs text-soft mr-1">利益</span>
-                <span className={calculatePointProfit(product) >= 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600 font-semibold'}>
-                  {formatCurrency(calculatePointProfit(product))}
-                </span>
-              </p>
-              <p className="whitespace-nowrap">
-                <span className="text-xs text-soft mr-1">P利益</span>
-                <span className={calculateProfit(product) >= 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600 font-semibold'}>
-                  {formatCurrency(calculateProfit(product))}
-                </span>
               </p>
             </>
           )}
