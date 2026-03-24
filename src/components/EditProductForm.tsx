@@ -4,6 +4,7 @@ import { NumericInput } from '@/components/NumericInput';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
+import { copyToClipboard } from '@/lib/utils';
 import { getPurchaseLocationUsageCounts, getUserPurchaseLocations } from '@/lib/firestore';
 import type { Product } from '@/types';
 
@@ -176,11 +177,11 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 <button
                   type="button"
                   onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(product.janCode || '');
+                    const ok = await copyToClipboard(product.janCode || '');
+                    if (ok) {
                       setJanCopied(true);
                       window.setTimeout(() => setJanCopied(false), 1200);
-                    } catch { /* noop */ }
+                    }
                   }}
                   className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] border border-slate-200 text-slate-600 hover:bg-slate-50"
                   title="JANをコピー"

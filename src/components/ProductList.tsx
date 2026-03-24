@@ -2,7 +2,7 @@
 import { Copy, Search, SlidersHorizontal } from 'lucide-react';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { EditProductForm } from './EditProductForm';
-import { calculatePointProfit, calculateProfit, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
+import { calculatePointProfit, calculateProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface ProductListProps {
@@ -239,14 +239,12 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
                 <button
                   type="button"
                   onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(product.janCode || '');
+                    const ok = await copyToClipboard(product.janCode || '');
+                    if (ok) {
                       setCopiedProductId(product.id);
                       window.setTimeout(() => {
                         setCopiedProductId((prev) => (prev === product.id ? null : prev));
                       }, 1200);
-                    } catch {
-                      // noop
                     }
                   }}
                   className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0"
@@ -432,13 +430,7 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
                       {g.janCode && (
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(g.janCode);
-                            } catch {
-                              // noop
-                            }
-                          }}
+                          onClick={() => copyToClipboard(g.janCode)}
                           className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0"
                           title="JANをコピー"
                         >
