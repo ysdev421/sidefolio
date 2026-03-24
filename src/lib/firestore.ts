@@ -571,6 +571,7 @@ export interface ConfirmSaleBatchInput {
   productIds: string[];
   saleDate: string;
   saleLocation: string;
+  saleMethod?: string;
   receivedCash: number;
   receivedPoint: number;
   pointRate: number;
@@ -641,6 +642,7 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
     userId: input.userId,
     saleDate: input.saleDate,
     saleLocation: input.saleLocation,
+    saleMethod: input.saleMethod || '来店',
     receivedCash,
     receivedPoint,
     pointRate,

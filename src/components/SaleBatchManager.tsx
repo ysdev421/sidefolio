@@ -16,6 +16,7 @@ const SALE_LOCATIONS = ['買取wiki', '買取商店', '森森買取'] as const;
 export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [query, setQuery] = useState('');
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [saleMethod, setSaleMethod] = useState<'来店' | '郵送'>('来店');
   const [saleLocation, setSaleLocation] = useState<(typeof SALE_LOCATIONS)[number]>(SALE_LOCATIONS[0]);
   const [receivedPoint, setReceivedPoint] = useState('');
   const [pointRate, setPointRate] = useState('1');
@@ -155,6 +156,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         productIds: selectedIds,
         saleDate,
         saleLocation: saleLocation.trim(),
+        saleMethod,
         receivedCash: basePurchaseAmountValue,
         receivedPoint: bonusPointValue,
         pointRate: pointRateValue,
@@ -189,6 +191,21 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <div>
             <RichDatePicker label="売却日" value={saleDate} onChange={setSaleDate} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">方法</label>
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
+              {(['来店', '郵送'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setSaleMethod(m)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${saleMethod === m ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-xs text-slate-600 mb-1">売却先</label>
