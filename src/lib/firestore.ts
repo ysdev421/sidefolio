@@ -827,6 +827,49 @@ export async function getSaleBatchDetail(userId: string, batchId: string): Promi
   };
 }
 
+export async function updateSaleBatchItemPrices(
+  userId: string,
+  batchId: string,
+  newPrices: Record<string, number> // productId -> new allocatedSalePrice
+): Promise<void> {
+  const batchRef = doc(db, 'sale_batches', batchId);
+  const snap = await getDoc(batchRef);
+  if (!snap.exists()) throw new Error('売却バッチが見つかりません');
+  const d = snap.data() as any;
+  if (String(d.userId || '') !== userId) throw new Error('権限がありません');
+
+  const items = Array.isArray(d.items) ? d.items : [];
+  const updatedItems = items.map((item: any) => {
+    const productId = String(item.productId || '');
+    if (newPrices[productId] !== undefined) {
+      return { ...item, allocatedSalePrice: newPrices[productId], allocatedCash: newPrices[productId] };
+    }
+    return item;
+  });
+
+  const newReceivedCash = updatedItems.reduce((sum: number, item: any) => sum + toNumberSafe(item.allocatedCash), 0);
+  const receivedPointValue = Math.max(0, toNumberSafe(d.receivedPointValue));
+  const newTotalRevenue = newReceivedCash + receivedPointValue;
+
+  const wb = writeBatch(db);
+  wb.update(batchRef, {
+    items: updatedItems,
+    receivedCash: newReceivedCash,
+    totalRevenue: newTotalRevenue,
+    updatedAt: Timestamp.now(),
+  });
+
+  for (const [productId, price] of Object.entries(newPrices)) {
+    const productRef = doc(db, 'products', productId);
+    const productSnap = await getDoc(productRef);
+    if (productSnap.exists() && String(productSnap.data()?.userId || '') === userId) {
+      wb.update(productRef, { salePrice: price, updatedAt: Timestamp.now() });
+    }
+  }
+
+  await wb.commit();
+}
+
 export async function getUserRecentSaleBatches(userId: string, maxCount = 20): Promise<SaleBatchSummary[]> {
   const q = query(collection(db, 'sale_batches'), where('userId', '==', userId), limit(Math.max(1, maxCount * 3)));
   const snap = await getDocs(q);

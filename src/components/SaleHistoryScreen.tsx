@@ -4,6 +4,7 @@ import {
   cancelSaleBatchInFirestore,
   getSaleBatchDetail,
   getUserRecentSaleBatches,
+  updateSaleBatchItemPrices,
   type SaleBatchDetail,
   type SaleBatchSummary,
 } from '@/lib/firestore';
@@ -21,6 +22,9 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
   const [confirmTarget, setConfirmTarget] = useState<SaleBatchSummary | null>(null);
   const [detailTarget, setDetailTarget] = useState<SaleBatchDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editPrices, setEditPrices] = useState<Record<string, string>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const [message, setMessage] = useState('');
   const [errorModal, setErrorModal] = useState<{ title: string; detail: string } | null>(null);
   const updateProduct = useStore((state) => state.updateProduct);
@@ -70,6 +74,36 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
       });
     } finally {
       setCancelingBatchId('');
+    }
+  };
+
+  const startEdit = () => {
+    if (!detailTarget) return;
+    const prices: Record<string, string> = {};
+    detailTarget.items.forEach((item) => {
+      prices[item.productId] = String(item.allocatedSalePrice);
+    });
+    setEditPrices(prices);
+    setEditMode(true);
+  };
+
+  const saveEdit = async () => {
+    if (!detailTarget) return;
+    setSavingEdit(true);
+    try {
+      const newPrices: Record<string, number> = {};
+      detailTarget.items.forEach((item) => {
+        newPrices[item.productId] = Math.max(0, Math.round(parseFloat(editPrices[item.productId] ?? '0') || 0));
+      });
+      await updateSaleBatchItemPrices(userId, detailTarget.id, newPrices);
+      const updated = await getSaleBatchDetail(userId, detailTarget.id);
+      setDetailTarget(updated);
+      setEditMode(false);
+      await loadRecentBatches();
+    } catch (e) {
+      setErrorModal({ title: '保存エラー', detail: e instanceof Error ? e.message : '保存に失敗しました' });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -132,9 +166,16 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4 my-8" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h4 className="text-base font-bold text-slate-900">売却詳細</h4>
-              <button type="button" onClick={() => setDetailTarget(null)} className="p-1 rounded-lg hover:bg-slate-100">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
+              <div className="flex items-center gap-2">
+                {!editMode && !detailTarget?.canceledAt && (
+                  <button type="button" onClick={startEdit} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-700 hover:bg-amber-50">
+                    減額修正
+                  </button>
+                )}
+                <button type="button" onClick={() => { setDetailTarget(null); setEditMode(false); }} className="p-1 rounded-lg hover:bg-slate-100">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
             </div>
 
             {loadingDetail ? (
@@ -191,14 +232,39 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                         <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                           <p className="text-sm font-semibold text-slate-900 truncate">{item.productName}</p>
                           {item.janCode && <p className="text-xs text-slate-400 font-mono">{item.janCode}</p>}
-                          <div className="flex gap-3 mt-1 text-xs text-slate-600">
-                            <span>仕入: {formatCurrency(item.purchasePrice)}</span>
-                            <span>売却額: {formatCurrency(item.allocatedSalePrice)}</span>
-                            {item.allocatedPointValue > 0 && <span>P相当: {formatCurrency(item.allocatedPointValue)}</span>}
-                          </div>
+                          {editMode ? (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-xs text-slate-500">仕入: {formatCurrency(item.purchasePrice)}</span>
+                              <span className="text-xs text-slate-400">元: {formatCurrency(item.allocatedSalePrice)}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={editPrices[item.productId] ?? ''}
+                                onChange={(e) => setEditPrices((prev) => ({ ...prev, [item.productId]: e.target.value }))}
+                                className="input-field h-8 text-sm w-28"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex gap-3 mt-1 text-xs text-slate-600">
+                              <span>仕入: {formatCurrency(item.purchasePrice)}</span>
+                              <span>売却額: {formatCurrency(item.allocatedSalePrice)}</span>
+                              {item.allocatedPointValue > 0 && <span>P相当: {formatCurrency(item.allocatedPointValue)}</span>}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
+                    {editMode && (
+                      <div className="flex justify-end gap-2 mt-3">
+                        <button type="button" onClick={() => setEditMode(false)} className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm">
+                          キャンセル
+                        </button>
+                        <button type="button" onClick={saveEdit} disabled={savingEdit} className="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm inline-flex items-center gap-1">
+                          {savingEdit && <Loader2 className="w-3 h-3 animate-spin" />}
+                          保存
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
