@@ -43,6 +43,7 @@ function App() {
   const { products, deleteProductData, updateProductData } = useProducts(user?.id || null);
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [masterInitial, setMasterInitial] = useState<{ janCode: string; productName: string } | null>(null);
   const [showManagementMenu, setShowManagementMenu] = useState(false);
   const managementMenuRef = useRef<HTMLDivElement>(null);
 
@@ -246,7 +247,12 @@ function App() {
               onBulkUpdate={bulkUpdateStatus}
             />
           ) : appView === 'productMasterManager' ? (
-            <ProductMasterManager userId={user.id} />
+            <ProductMasterManager
+              key={masterInitial ? `${masterInitial.janCode}-${masterInitial.productName}` : 'default'}
+              userId={user.id}
+              initialJanCode={masterInitial?.janCode}
+              initialProductName={masterInitial?.productName}
+            />
           ) : appView === 'adminJanManager' && isAdmin ? (
             <AdminJanManager />
           ) : screen === 'summary' ? (
@@ -366,7 +372,15 @@ function App() {
 
       {showAddForm && (
         <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/30" />}>
-          <AddProductForm userId={user.id} onClose={() => setShowAddForm(false)} />
+          <AddProductForm
+            userId={user.id}
+            onClose={() => setShowAddForm(false)}
+            onGoToMaster={(janCode, productName) => {
+              setShowAddForm(false);
+              setMasterInitial({ janCode, productName });
+              setAppView('productMasterManager');
+            }}
+          />
         </Suspense>
       )}
     </div>

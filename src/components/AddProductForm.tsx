@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { Camera, Loader, Plus, X } from 'lucide-react';
+import { Camera, ExternalLink, Loader, Plus, X } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import {
   getPurchaseLocationUsageCounts,
@@ -17,11 +17,12 @@ import { JanScannerModal } from '@/components/JanScannerModal';
 interface AddProductFormProps {
   userId: string;
   onClose?: () => void;
+  onGoToMaster?: (janCode: string, productName: string) => void;
 }
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
-export function AddProductForm({ userId, onClose }: AddProductFormProps) {
+export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductFormProps) {
   const isKaitori = true;
   const [formData, setFormData] = useState({
     janCode: '',
@@ -37,6 +38,7 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [janHint, setJanHint] = useState('');
+  const [janNotFound, setJanNotFound] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
@@ -108,6 +110,7 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
     const janCode = normalizeJanCode(janInput);
     setFormData((prev) => ({ ...prev, janCode }));
     setJanHint('');
+    setJanNotFound(false);
 
     if (!janCode) return;
 
@@ -125,7 +128,8 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
     }
 
     setFormData((prev) => ({ ...prev, productName: '' }));
-    setJanHint('商品マスタに未登録です。商品マスタ管理で登録してください');
+    setJanHint('商品マスタに未登録です');
+    setJanNotFound(true);
   };
 
   const applyMaster = (master: ProductMaster) => {
@@ -161,7 +165,8 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
     }
 
     if (hits.length === 0) {
-      setJanHint('候補が見つかりません。別の商品名かJANで試してください');
+      setJanHint('候補が見つかりません');
+      setJanNotFound(true);
     } else {
       setJanHint('候補から商品を選択してください');
     }
@@ -287,7 +292,21 @@ export function AddProductForm({ userId, onClose }: AddProductFormProps) {
                   </button>
                 )}
               </div>
-              {janHint && <p className="mt-1 text-xs text-slate-600">{janHint}</p>}
+              {janHint && (
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-slate-600">{janHint}</p>
+                  {janNotFound && onGoToMaster && (
+                    <button
+                      type="button"
+                      onClick={() => onGoToMaster(formData.janCode, kaitoriLookup)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700 underline underline-offset-2"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      商品マスタに登録する
+                    </button>
+                  )}
+                </div>
+              )}
               {fieldErrors.janCode && <p className="mt-1 text-xs text-rose-600">{fieldErrors.janCode}</p>}
               <p className="mt-1 text-[11px] text-slate-500">JANは通常 8桁 または 13桁です</p>
               {kaitoriCandidates.length > 0 && (

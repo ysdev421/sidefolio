@@ -5,15 +5,17 @@ import type { ProductMaster } from '@/types';
 
 interface ProductMasterManagerProps {
   userId: string;
+  initialJanCode?: string;
+  initialProductName?: string;
 }
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
-export function ProductMasterManager({ userId }: ProductMasterManagerProps) {
+export function ProductMasterManager({ userId, initialJanCode, initialProductName }: ProductMasterManagerProps) {
   const [masters, setMasters] = useState<ProductMaster[]>([]);
   const [query, setQuery] = useState('');
-  const [janCode, setJanCode] = useState('');
-  const [productName, setProductName] = useState('');
+  const [janCode, setJanCode] = useState(initialJanCode ?? '');
+  const [productName, setProductName] = useState(initialProductName ?? '');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
