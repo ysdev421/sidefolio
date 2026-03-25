@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckSquare, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { NumericInput } from '@/components/NumericInput';
-import { confirmSaleBatchInFirestore } from '@/lib/firestore';
+import { confirmSaleBatchInFirestore, getUserSaleLocations } from '@/lib/firestore';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { useStore } from '@/lib/store';
 import { formatCurrency, getActualPayment, getEffectiveCost } from '@/lib/utils';
@@ -12,7 +12,6 @@ interface SaleBatchManagerProps {
   userId: string;
 }
 
-const SALE_LOCATIONS = ['買取wiki', '買取商店', '森森買取'] as const;
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 const clampInt = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
@@ -39,7 +38,8 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [saleMethod, setSaleMethod] = useState<'来店' | '郵送'>('来店');
   const [shippingType, setShippingType] = useState<'送料込みキャンペーン' | '実費'>('送料込みキャンペーン');
   const [shippingCost, setShippingCost] = useState('');
-  const [saleLocation, setSaleLocation] = useState<(typeof SALE_LOCATIONS)[number]>(SALE_LOCATIONS[0]);
+  const [saleLocations, setSaleLocations] = useState<string[]>([]);
+  const [saleLocation, setSaleLocation] = useState('');
   const [receivedPoint, setReceivedPoint] = useState('');
   const [memo, setMemo] = useState('');
   const [selectedGroupKeys, setSelectedGroupKeys] = useState<string[]>([]);
@@ -52,6 +52,13 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [message, setMessage] = useState('');
   const [errorModal, setErrorModal] = useState<{ title: string; detail: string } | null>(null);
   const updateProduct = useStore((state) => state.updateProduct);
+
+  useEffect(() => {
+    getUserSaleLocations(userId).then((rows) => {
+      setSaleLocations(rows);
+      setSaleLocation(rows[0] ?? '');
+    });
+  }, [userId]);
 
   const candidates = useMemo(() => {
     return products.filter((p) => p.status === 'inventory' && (p.quantityAvailable ?? p.quantityTotal ?? 1) > 0);
@@ -343,8 +350,8 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
             </div>
             <div>
               <label className="block text-xs text-slate-600 mb-1">売却先</label>
-              <select value={saleLocation} onChange={(e) => setSaleLocation(e.target.value as (typeof SALE_LOCATIONS)[number])} className="input-field">
-                {SALE_LOCATIONS.map((location) => (
+              <select value={saleLocation} onChange={(e) => setSaleLocation(e.target.value)} className="input-field">
+                {saleLocations.map((location) => (
                   <option key={location} value={location}>
                     {location}
                   </option>
