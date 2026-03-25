@@ -221,6 +221,98 @@ function DailyLineChart({ data, metric }: { data: { date: string; revenue: numbe
   );
 }
 
+// ─── 評価コメント ────────────────────────────────────────
+
+type Grade = 'S' | 'A' | 'B' | 'C' | 'D' | '-';
+
+interface Evaluation {
+  grade: Grade;
+  comment: string;
+  gradeBg: string;
+  gradeText: string;
+  bannerBg: string;
+}
+
+function getEvaluation(
+  soldCount: number,
+  profitRate: number,   // 売上に対する利益率（P含む）
+  momProfit: number | null
+): Evaluation {
+  if (soldCount < 3) {
+    return {
+      grade: '-',
+      comment: 'まだデータが少ないです。3件以上売却すると評価が表示されます。',
+      gradeBg: 'bg-slate-100',
+      gradeText: 'text-slate-500',
+      bannerBg: 'from-slate-50 to-slate-100',
+    };
+  }
+
+  const trend =
+    momProfit === null ? 'neutral'
+    : momProfit >= 10 ? 'up'
+    : momProfit <= -10 ? 'down'
+    : 'neutral';
+
+  if (profitRate >= 25) {
+    const comments: Record<typeof trend, string> = {
+      up: '絶好調です！利益率・伸びともに優秀。この調子で仕入れを加速しましょう。',
+      neutral: '高い利益率をキープしています。仕入れ量を増やすチャンスかもしれません。',
+      down: '利益率は高水準ですが伸びが鈍化しています。仕入れ単価を見直してみては？',
+    };
+    return { grade: 'S', comment: comments[trend], gradeBg: 'bg-gradient-to-br from-amber-400 to-yellow-300', gradeText: 'text-white', bannerBg: 'from-amber-50 to-yellow-50' };
+  }
+
+  if (profitRate >= 15) {
+    const comments: Record<typeof trend, string> = {
+      up: '好調です。利益率・伸びともに良好。このペースを維持しましょう。',
+      neutral: '安定した利益が出ています。さらに利益率を伸ばす商材を探してみましょう。',
+      down: '利益率は良好ですが前期より落ちています。仕入れ先の見直しを検討してみては？',
+    };
+    return { grade: 'A', comment: comments[trend], gradeBg: 'bg-gradient-to-br from-emerald-500 to-green-400', gradeText: 'text-white', bannerBg: 'from-emerald-50 to-green-50' };
+  }
+
+  if (profitRate >= 5) {
+    const comments: Record<typeof trend, string> = {
+      up: '改善中です！利益率をさらに上げることを意識しましょう。',
+      neutral: '利益は出ていますが利益率はまだ改善の余地があります。高利益商材の開拓を。',
+      down: '利益率が低下しています。仕入れコストを見直しましょう。',
+    };
+    return { grade: 'B', comment: comments[trend], gradeBg: 'bg-gradient-to-br from-sky-500 to-blue-400', gradeText: 'text-white', bannerBg: 'from-sky-50 to-blue-50' };
+  }
+
+  if (profitRate >= 0) {
+    const comments: Record<typeof trend, string> = {
+      up: '損益分岐点付近ですが改善の兆しがあります。高利益商品を増やしましょう。',
+      neutral: '利益が薄い状態です。仕入れ価格か販売価格の見直しが必要です。',
+      down: '損益分岐点付近で悪化傾向です。早めに戦略を見直してください。',
+    };
+    return { grade: 'C', comment: comments[trend], gradeBg: 'bg-gradient-to-br from-amber-500 to-orange-400', gradeText: 'text-white', bannerBg: 'from-amber-50 to-orange-50' };
+  }
+
+  return {
+    grade: 'D',
+    comment: '損失が出ています。仕入れ方針を早急に見直してください。利益率の高い商材へのシフトを検討しましょう。',
+    gradeBg: 'bg-gradient-to-br from-rose-500 to-red-500',
+    gradeText: 'text-white',
+    bannerBg: 'from-rose-50 to-red-50',
+  };
+}
+
+function EvaluationBanner({ evaluation }: { evaluation: Evaluation }) {
+  return (
+    <div className={`rounded-2xl bg-gradient-to-br ${evaluation.bannerBg} border border-white/60 p-4 flex items-start gap-3`}>
+      <div className={`${evaluation.gradeBg} ${evaluation.gradeText} w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm`}>
+        <span className="text-lg font-black">{evaluation.grade}</span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-slate-500 mb-0.5">AI評価</p>
+        <p className="text-sm text-slate-800 leading-relaxed">{evaluation.comment}</p>
+      </div>
+    </div>
+  );
+}
+
 function momText(value: number | null) {
   if (value === null) return '前月比 -';
   const sign = value >= 0 ? '+' : '';
@@ -234,6 +326,8 @@ export function Dashboard({ products, allProducts, periodFilter, showMoM = true 
 
   const summary = calculateProfitSummary(products);
   const mom = calcMoM(allProducts, periodFilter);
+  const profitRate = summary.totalRevenue > 0 ? (summary.totalProfit / summary.totalRevenue) * 100 : 0;
+  const evaluation = getEvaluation(summary.soldCount, profitRate, mom.profit);
   const inventoryMom = calcInventoryMoM(allProducts, periodFilter);
   const monthly = buildMonthlySeries(allProducts);
   const maxRevenue = Math.max(1, ...monthly.map((m) => m.revenue));
@@ -336,8 +430,9 @@ export function Dashboard({ products, allProducts, periodFilter, showMoM = true 
       </div>
 
       {/* サマリー */}
-      <div className="glass-panel p-5 bg-gradient-to-br from-white/80 to-cyan-50/70">
-        <h3 className="font-bold text-slate-800 mb-3">サマリー</h3>
+      <div className="glass-panel p-5 bg-gradient-to-br from-white/80 to-cyan-50/70 space-y-4">
+        <EvaluationBanner evaluation={evaluation} />
+        <h3 className="font-bold text-slate-800">サマリー</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           <div><p className="text-soft">商品数</p><p className="font-bold text-lg text-slate-900">{summary.totalProducts}</p></div>
           <div><p className="text-soft">売却済み</p><p className="font-bold text-lg text-emerald-700">{summary.soldCount}</p></div>
