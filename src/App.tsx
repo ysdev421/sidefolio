@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useState } from 'react';
-import { BarChart3, BookOpen, ChevronLeft, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
+import { BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -42,9 +42,12 @@ const ExpenseManager = lazy(() =>
 const AnnualSummaryScreen = lazy(() =>
   import('@/components/AnnualSummaryScreen').then((m) => ({ default: m.AnnualSummaryScreen }))
 );
+const GiftCardManager = lazy(() =>
+  import('@/components/GiftCardManager').then((m) => ({ default: m.GiftCardManager }))
+);
 
 type Screen = 'summary' | 'list' | 'sale' | 'saleHistory' | 'admin';
-type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary';
+type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager';
 
 function App() {
   const { authLoading } = useAuth();
@@ -200,6 +203,8 @@ function App() {
                 <ExpenseManager userId={user.id} />
               ) : appView === 'annualSummary' ? (
                 <AnnualSummaryScreen userId={user.id} products={filteredProducts} />
+              ) : appView === 'giftCardManager' ? (
+                <GiftCardManager userId={user.id} />
               ) : appView === 'adminJanManager' && isAdmin ? (
                 <AdminJanManager />
               ) : null}
@@ -213,6 +218,7 @@ function App() {
                   { view: 'saleLocationMaster' as const, label: '売却先\nマスタ管理', icon: MapPin, color: 'from-emerald-100 to-teal-100 text-emerald-600' },
                   { view: 'statusBatchManager' as const, label: 'ステータス\n一括管理', icon: RefreshCw, color: 'from-violet-100 to-purple-100 text-violet-600' },
                   { view: 'productMasterManager' as const, label: '商品マスタ\n管理', icon: BookOpen, color: 'from-emerald-100 to-green-100 text-emerald-600' },
+                  { view: 'giftCardManager' as const, label: 'ギフトカード\n管理', icon: CreditCard, color: 'from-sky-100 to-indigo-100 text-sky-600' },
                   { view: 'expenseManager' as const, label: '経費管理', icon: Receipt, color: 'from-rose-100 to-pink-100 text-rose-600' },
                   { view: 'annualSummary' as const, label: '年間サマリー\n（確定申告用）', icon: FileText, color: 'from-amber-100 to-orange-100 text-amber-600' },
                   ...(isAdmin ? [{ view: 'adminJanManager' as const, label: 'JAN抽出/投入\n（管理者）', icon: Database, color: 'from-slate-100 to-slate-200 text-slate-600' }] : []),

@@ -16,7 +16,7 @@
   where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Expense, ExpenseCategory, KaitoriPriceHistory, Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
+import type { Expense, ExpenseCategory, GiftCard, KaitoriPriceHistory, Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
 
 export async function addProductToFirestore(
   userId: string,
@@ -1170,6 +1170,55 @@ export async function addKaitoriPriceHistory(
     source,
     recordedAt: Timestamp.now(),
   });
+}
+
+// ─── ギフトカード管理 ────────────────────────────────────
+
+export async function getUserGiftCards(userId: string): Promise<GiftCard[]> {
+  const q = query(collection(db, 'gift_cards'), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  const rows: GiftCard[] = snap.docs.map((d: any) => {
+    const data = d.data() as any;
+    return {
+      id: d.id,
+      userId: String(data.userId || ''),
+      brand: data.brand || 'その他',
+      purchaseSource: String(data.purchaseSource || ''),
+      purchasedAt: String(data.purchasedAt || ''),
+      faceValue: toNumberSafe(data.faceValue),
+      purchasedPrice: toNumberSafe(data.purchasedPrice),
+      earnedPoint: toNumberSafe(data.earnedPoint),
+      balance: toNumberSafe(data.balance),
+      memo: data.memo ? String(data.memo) : undefined,
+      createdAt: toIso(data.createdAt),
+      updatedAt: toIso(data.updatedAt),
+    } satisfies GiftCard;
+  });
+  return rows.sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt));
+}
+
+export async function addGiftCard(
+  userId: string,
+  data: Omit<GiftCard, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const docRef = await addDoc(collection(db, 'gift_cards'), {
+    ...data,
+    userId,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export async function updateGiftCard(
+  id: string,
+  updates: Partial<Omit<GiftCard, 'id' | 'userId' | 'createdAt'>>
+): Promise<void> {
+  await updateDoc(doc(db, 'gift_cards', id), { ...updates, updatedAt: Timestamp.now() });
+}
+
+export async function deleteGiftCard(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'gift_cards', id));
 }
 
 export async function getKaitoriPriceHistory(janCode: string): Promise<KaitoriPriceHistory[]> {

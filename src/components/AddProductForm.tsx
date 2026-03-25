@@ -6,6 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import {
   getJanMasterByCode,
   getPurchaseLocationUsageCounts,
+  getUserGiftCards,
   getUserProductMasters,
   getUserPurchaseLocations,
   getUserProductTemplates,
@@ -14,7 +15,7 @@ import {
   upsertUserJanUsage,
 } from '@/lib/firestore';
 import { useStore } from '@/lib/store';
-import type { ProductMaster, ProductTemplate } from '@/types';
+import type { GiftCard, GiftCardUsage, ProductMaster, ProductTemplate, PurchaseBreakdown } from '@/types';
 import { JanScannerModal } from '@/components/JanScannerModal';
 
 interface AddProductFormProps {
@@ -51,6 +52,11 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
   const [kaitoriCandidates, setKaitoriCandidates] = useState<ProductMaster[]>([]);
+  const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [breakdownCash, setBreakdownCash] = useState('');
+  const [breakdownGiftUsages, setBreakdownGiftUsages] = useState<{ cardId: string; amount: string }[]>([]);
+  const [breakdownPointUse, setBreakdownPointUse] = useState('0');
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
   const [masters, setMasters] = useState<ProductMaster[]>([]);
   const [purchaseLocations, setPurchaseLocations] = useState<string[]>(['メルカリ']);
@@ -60,12 +66,14 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const [templateRows, masterRows] = await Promise.all([
+        const [templateRows, masterRows, giftCardRows] = await Promise.all([
           getUserProductTemplates(userId),
           getUserProductMasters(userId),
+          getUserGiftCards(userId),
         ]);
         setTemplates(templateRows);
         setMasters(masterRows);
+        setGiftCards(giftCardRows.filter((c) => c.balance > 0));
       } catch {
         setTemplates([]);
         setMasters([]);
@@ -250,6 +258,31 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
       const extraPointsNums = extraPoints.map((p) => parseFloat(p) || 0).filter((v) => v !== 0);
       const point = (parseFloat(formData.point) || 0) + extraPointsNums.reduce((s, v) => s + v, 0);
 
+      // 支払い内訳の組み立て
+      let purchaseBreakdown: PurchaseBreakdown | undefined;
+      if (showBreakdown && breakdownGiftUsages.some((u) => parseFloat(u.amount) > 0)) {
+        const giftCardUsages: GiftCardUsage[] = breakdownGiftUsages
+          .filter((u) => parseFloat(u.amount) > 0)
+          .map((u) => {
+            const card = giftCards.find((c) => c.id === u.cardId);
+            const amount = parseFloat(u.amount) || 0;
+            if (!card) return { giftCardId: u.cardId, brand: 'その他', amount, realCost: amount, earnedPointAlloc: 0 };
+            const ratio = card.faceValue > 0 ? amount / card.faceValue : 1;
+            return {
+              giftCardId: card.id,
+              brand: card.brand,
+              amount,
+              realCost: Math.round(card.purchasedPrice * ratio),
+              earnedPointAlloc: Math.round(card.earnedPoint * ratio),
+            };
+          });
+        purchaseBreakdown = {
+          cash: parseFloat(breakdownCash) || 0,
+          giftCardUsages,
+          pointUse: parseFloat(breakdownPointUse) || 0,
+        };
+      }
+
       await createProduct({
         ...(normalizedJan ? { janCode: normalizedJan } : {}),
         productName: formData.productName,
@@ -262,6 +295,7 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
         purchaseLocation: formData.purchaseLocation,
         status: formData.initialStatus,
         ...(formData.memo.trim() ? { memo: formData.memo.trim() } : {}),
+        ...(purchaseBreakdown ? { purchaseBreakdown } : {}),
       });
 
       await upsertProductTemplate(userId, {
@@ -294,6 +328,10 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
       });
       setJanHint('');
       setExtraPoints([]);
+      setShowBreakdown(false);
+      setBreakdownGiftUsages([]);
+      setBreakdownCash('');
+      setBreakdownPointUse('0');
       onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました');
@@ -568,6 +606,114 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* 支払い内訳（ギフトカード使用時） */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowBreakdown((v) => !v)}
+              className="text-xs font-semibold text-sky-600 hover:text-sky-700 transition"
+            >
+              {showBreakdown ? '▲ 支払い内訳を閉じる' : '▼ ギフトカードを使った場合は内訳を入力'}
+            </button>
+            {showBreakdown && (
+              <div className="mt-2 glass-panel p-3 space-y-3">
+                <p className="text-xs text-slate-500">購入金額合計と内訳の合計が一致するように入力してください</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">現金払い</label>
+                    <NumericInput
+                      integer
+                      value={breakdownCash}
+                      onChange={(e) => setBreakdownCash(e.target.value)}
+                      className="input-field py-1.5 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">ポイント払い</label>
+                    <NumericInput
+                      integer
+                      value={breakdownPointUse}
+                      onChange={(e) => setBreakdownPointUse(e.target.value)}
+                      className="input-field py-1.5 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-600">ギフトカード使用</label>
+                    <button
+                      type="button"
+                      onClick={() => setBreakdownGiftUsages((prev) => [...prev, { cardId: giftCards[0]?.id || '', amount: '' }])}
+                      className="text-xs text-sky-600 hover:text-sky-700 font-semibold"
+                    >
+                      ＋ 追加
+                    </button>
+                  </div>
+                  {giftCards.length === 0 && (
+                    <p className="text-xs text-slate-400">残高のあるギフトカードがありません（管理メニューから追加）</p>
+                  )}
+                  <div className="space-y-1.5">
+                    {breakdownGiftUsages.map((u, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <select
+                          value={u.cardId}
+                          onChange={(e) => {
+                            const next = [...breakdownGiftUsages];
+                            next[i] = { ...next[i], cardId: e.target.value };
+                            setBreakdownGiftUsages(next);
+                          }}
+                          className="input-field py-1 text-xs flex-1"
+                        >
+                          {giftCards.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.brand} ({c.purchasedAt}) 残{c.balance.toLocaleString()}円
+                            </option>
+                          ))}
+                        </select>
+                        <NumericInput
+                          integer
+                          value={u.amount}
+                          onChange={(e) => {
+                            const next = [...breakdownGiftUsages];
+                            next[i] = { ...next[i], amount: e.target.value };
+                            setBreakdownGiftUsages(next);
+                          }}
+                          className="input-field py-1 text-xs w-24"
+                          placeholder="使用額"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setBreakdownGiftUsages((prev) => prev.filter((_, j) => j !== i))}
+                          className="text-slate-400 hover:text-rose-500 text-xs px-1"
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 内訳合計チェック */}
+                {(() => {
+                  const cash = parseFloat(breakdownCash) || 0;
+                  const pointUse = parseFloat(breakdownPointUse) || 0;
+                  const giftTotal = breakdownGiftUsages.reduce((s, u) => s + (parseFloat(u.amount) || 0), 0);
+                  const breakdownTotal = cash + pointUse + giftTotal;
+                  const purchaseTotal = parseFloat(formData.purchasePrice) || 0;
+                  const diff = purchaseTotal - breakdownTotal;
+                  return (
+                    <div className={`text-xs rounded-lg px-2 py-1.5 ${Math.abs(diff) <= 1 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                      内訳合計: {breakdownTotal.toLocaleString()}円
+                      {Math.abs(diff) > 1 && ` (購入金額合計と ${diff > 0 ? '+' : ''}${diff.toLocaleString()}円の差異)`}
+                      {Math.abs(diff) <= 1 && ' ✓'}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
 
           <div>

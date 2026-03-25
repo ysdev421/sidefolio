@@ -1,3 +1,32 @@
+export interface GiftCardUsage {
+  giftCardId: string;
+  brand: string;
+  amount: number;         // 使用額
+  realCost: number;       // 実コスト（使用額 / 額面 × 購入価格）
+  earnedPointAlloc: number; // 付与P按分（使用額 / 額面 × 付与P）
+}
+
+export interface PurchaseBreakdown {
+  cash: number;
+  giftCardUsages: GiftCardUsage[];
+  pointUse: number; // ポイント支払い分
+}
+
+export interface GiftCard {
+  id: string;
+  userId: string;
+  brand: 'Apple' | 'Amazon' | 'Google Play' | 'その他';
+  purchaseSource: string;   // 購入元（楽天など）
+  purchasedAt: string;
+  faceValue: number;        // 額面
+  purchasedPrice: number;   // 実際に払った金額
+  earnedPoint: number;      // 購入時付与ポイント
+  balance: number;          // 現在残高
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   userId: string;
@@ -17,6 +46,7 @@ export interface Product {
   extraPoints?: number[];
   kaitoriPrice?: number;
   kaitoriPriceAt?: string;
+  purchaseBreakdown?: PurchaseBreakdown;
   createdAt: string;
   updatedAt: string;
 }

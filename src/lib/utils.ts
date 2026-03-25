@@ -32,6 +32,12 @@ export function getRemainingActualPayment(product: Product): number {
 }
 
 export function getEffectiveCost(product: Product): number {
+  if (product.purchaseBreakdown) {
+    const { cash, giftCardUsages, pointUse } = product.purchaseBreakdown;
+    const giftCardRealCost = giftCardUsages.reduce((s, u) => s + u.realCost, 0);
+    const giftCardEarnedP = giftCardUsages.reduce((s, u) => s + u.earnedPointAlloc, 0);
+    return cash + giftCardRealCost + pointUse - giftCardEarnedP - product.point;
+  }
   return product.purchasePrice - product.point;
 }
 
