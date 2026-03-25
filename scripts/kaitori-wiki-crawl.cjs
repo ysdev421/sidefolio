@@ -102,6 +102,8 @@ async function main() {
   let totalUpdated = 0;
   let totalSkipped = 0;
   let totalFailed = 0;
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 3;
   const now = new Date().toISOString();
 
   for (let page = startPage; page <= TOTAL_PAGES; page++) {
@@ -181,7 +183,14 @@ async function main() {
     } catch (err) {
       console.error(`  [page ${page}] エラー:`, err.message);
       totalFailed++;
+      consecutiveErrors++;
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        console.error(`[crawl] ${MAX_CONSECUTIVE_ERRORS}ページ連続エラーのため中断します`);
+        process.exit(1);
+      }
+      continue;
     }
+    consecutiveErrors = 0;
 
     if (page < TOTAL_PAGES) {
       await sleep(intervalMs);
