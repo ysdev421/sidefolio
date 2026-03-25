@@ -150,7 +150,7 @@ export function PurchaseLocationMaster({ userId }: PurchaseLocationMasterProps) 
           <button
             onClick={addLocation}
             type="button"
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white inline-flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
           >
             <Plus className="w-4 h-4" />
             追加

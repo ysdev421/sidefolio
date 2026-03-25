@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckSquare, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckSquare, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { NumericInput } from '@/components/NumericInput';
 import { confirmSaleBatchInFirestore } from '@/lib/firestore';
 import { RichDatePicker } from '@/components/RichDatePicker';
@@ -14,18 +14,39 @@ interface SaleBatchManagerProps {
 
 const SALE_LOCATIONS = ['買取wiki', '買取商店', '森森買取'] as const;
 
+const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
+const clampInt = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
+
+type GroupLot = {
+  product: Product;
+  availableQty: number;
+  unitEffectiveCost: number;
+  unitActualCost: number;
+};
+
+type JanGroup = {
+  key: string;
+  janCode: string;
+  productName: string;
+  totalAvailable: number;
+  lots: GroupLot[];
+  searchText: string;
+};
+
 export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const [query, setQuery] = useState('');
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
   const [saleMethod, setSaleMethod] = useState<'来店' | '郵送'>('来店');
-  const [shippingType, setShippingType] = useState<'着払いキャンペーン' | '実費'>('着払いキャンペーン');
+  const [shippingType, setShippingType] = useState<'送料込みキャンペーン' | '実費'>('送料込みキャンペーン');
   const [shippingCost, setShippingCost] = useState('');
   const [saleLocation, setSaleLocation] = useState<(typeof SALE_LOCATIONS)[number]>(SALE_LOCATIONS[0]);
   const [receivedPoint, setReceivedPoint] = useState('');
   const [memo, setMemo] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [productSalePrices, setProductSalePrices] = useState<Record<string, string>>({});
-  const [productSaleQtys, setProductSaleQtys] = useState<Record<string, string>>({});
+  const [selectedGroupKeys, setSelectedGroupKeys] = useState<string[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [lotSaleQtys, setLotSaleQtys] = useState<Record<string, string>>({});
+  const [lotUnitPrices, setLotUnitPrices] = useState<Record<string, string>>({});
+  const [lotReductionMemos, setLotReductionMemos] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -33,129 +54,235 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   const updateProduct = useStore((state) => state.updateProduct);
 
   const candidates = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return products
-      .filter((p) => p.status === 'inventory' && (p.quantityAvailable ?? p.quantityTotal ?? 1) > 0)
-      .filter((p) => {
-        if (!q) return true;
-        const text = [p.productName, p.purchaseLocation, p.janCode || ''].join(' ').toLowerCase();
-        return text.includes(q);
+    return products.filter((p) => p.status === 'inventory' && (p.quantityAvailable ?? p.quantityTotal ?? 1) > 0);
+  }, [products]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, JanGroup>();
+
+    candidates.forEach((p) => {
+      const availableQty = Math.max(0, p.quantityAvailable ?? p.quantityTotal ?? 1);
+      if (availableQty <= 0) return;
+
+      const normalizedJan = normalizeJanCode(p.janCode || '');
+      const productName = p.productName || '商品名未設定';
+      const key = normalizedJan ? `JAN:${normalizedJan}` : `NAME:${productName}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          janCode: normalizedJan,
+          productName,
+          totalAvailable: 0,
+          lots: [],
+          searchText: '',
+        });
+      }
+
+      const row = map.get(key)!;
+      const total = Math.max(1, p.quantityTotal ?? 1);
+      row.totalAvailable += availableQty;
+      row.lots.push({
+        product: p,
+        availableQty,
+        unitEffectiveCost: getEffectiveCost(p) / total,
+        unitActualCost: getActualPayment(p) / total,
       });
-  }, [products, query]);
+    });
 
-  const selectedProducts = useMemo(
-    () => candidates.filter((p) => selectedIds.includes(p.id)),
-    [candidates, selectedIds]
-  );
+    const sorted = Array.from(map.values())
+      .map((g) => {
+        const lots = [...g.lots].sort((a, b) => {
+          const da = new Date(a.product.purchaseDate).getTime();
+          const db = new Date(b.product.purchaseDate).getTime();
+          if (da !== db) return da - db;
+          return new Date(a.product.createdAt).getTime() - new Date(b.product.createdAt).getTime();
+        });
 
-  const getSoldQty = (p: Product) => {
-    const max = Math.max(1, p.quantityAvailable ?? p.quantityTotal ?? 1);
-    const raw = parseInt(productSaleQtys[p.id] ?? '', 10);
-    return isNaN(raw) ? max : Math.max(1, Math.min(max, raw));
+        const locations = Array.from(new Set(lots.map((l) => l.product.purchaseLocation).filter(Boolean))).join(' ');
+        return {
+          ...g,
+          lots,
+          searchText: [g.productName, g.janCode, locations].join(' ').toLowerCase(),
+        };
+      })
+      .sort((a, b) => {
+        if (a.janCode && b.janCode) return a.janCode.localeCompare(b.janCode);
+        if (a.janCode) return -1;
+        if (b.janCode) return 1;
+        return a.productName.localeCompare(b.productName, 'ja');
+      });
+
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((g) => g.searchText.includes(q));
+  }, [candidates, query]);
+
+  const groupMap = useMemo(() => {
+    const map = new Map<string, JanGroup>();
+    groups.forEach((g) => map.set(g.key, g));
+    return map;
+  }, [groups]);
+
+  const selectedGroups = useMemo(() => {
+    return selectedGroupKeys.map((key) => groupMap.get(key)).filter(Boolean) as JanGroup[];
+  }, [selectedGroupKeys, groupMap]);
+
+  const getLotSoldQty = (lot: GroupLot) => {
+    const raw = parseInt(lotSaleQtys[lot.product.id] ?? '0', 10);
+    if (Number.isNaN(raw)) return 0;
+    return clampInt(raw, 0, lot.availableQty);
   };
 
-  const selectedEffectiveCost = selectedProducts.reduce((sum, p) => {
-    const total = Math.max(1, p.quantityTotal ?? 1);
-    return sum + Math.round((getEffectiveCost(p) / total) * getSoldQty(p));
-  }, 0);
-  const selectedActualCost = selectedProducts.reduce((sum, p) => {
-    const total = Math.max(1, p.quantityTotal ?? 1);
-    return sum + Math.round((getActualPayment(p) / total) * getSoldQty(p));
-  }, 0);
-  const basePurchaseAmountValue = selectedProducts.reduce((sum, p) => {
-    const v = Math.max(0, Math.round(parseFloat(productSalePrices[p.id] || '0') || 0));
-    return sum + v;
-  }, 0);
+  const getLotUnitPrice = (lot: GroupLot) => {
+    return Math.max(0, Math.round(parseFloat(lotUnitPrices[lot.product.id] || '0') || 0));
+  };
+
+  const allocation = useMemo(() => {
+    const byProductQty: Record<string, number> = {};
+    const byProductCash: Record<string, number> = {};
+    const byGroupPreview: Record<string, Array<{ lot: GroupLot; soldQty: number; soldCash: number; soldEffective: number; soldActual: number }>> = {};
+
+    selectedGroups.forEach((group) => {
+      const rows: Array<{ lot: GroupLot; soldQty: number; soldCash: number; soldEffective: number; soldActual: number }> = [];
+
+      group.lots.forEach((lot) => {
+        const soldQty = getLotSoldQty(lot);
+        if (soldQty <= 0) return;
+
+        const unitPrice = getLotUnitPrice(lot);
+        const soldCash = soldQty * unitPrice;
+        const soldEffective = Math.round(lot.unitEffectiveCost * soldQty);
+        const soldActual = Math.round(lot.unitActualCost * soldQty);
+
+        byProductQty[lot.product.id] = soldQty;
+        byProductCash[lot.product.id] = soldCash;
+
+        rows.push({
+          lot,
+          soldQty,
+          soldCash,
+          soldEffective,
+          soldActual,
+        });
+      });
+
+      byGroupPreview[group.key] = rows;
+    });
+
+    return { byProductQty, byProductCash, byGroupPreview };
+  }, [selectedGroups, lotSaleQtys, lotUnitPrices]);
+
+  const selectedProductIds = useMemo(
+    () => Object.keys(allocation.byProductQty).filter((id) => allocation.byProductQty[id] > 0),
+    [allocation.byProductQty]
+  );
+
+  const productSaleQtys = useMemo(() => {
+    return selectedProductIds.reduce<Record<string, number>>((acc, id) => {
+      acc[id] = allocation.byProductQty[id];
+      return acc;
+    }, {});
+  }, [selectedProductIds, allocation.byProductQty]);
+
+  const productBasePrices = useMemo(() => {
+    return selectedProductIds.reduce<Record<string, number>>((acc, id) => {
+      acc[id] = allocation.byProductCash[id] || 0;
+      return acc;
+    }, {});
+  }, [selectedProductIds, allocation.byProductCash]);
+
+  const selectedEffectiveCost = useMemo(
+    () => selectedGroups.reduce((sum, group) => sum + (allocation.byGroupPreview[group.key] || []).reduce((s, row) => s + row.soldEffective, 0), 0),
+    [selectedGroups, allocation.byGroupPreview]
+  );
+
+  const selectedActualCost = useMemo(
+    () => selectedGroups.reduce((sum, group) => sum + (allocation.byGroupPreview[group.key] || []).reduce((s, row) => s + row.soldActual, 0), 0),
+    [selectedGroups, allocation.byGroupPreview]
+  );
+
+  const basePurchaseAmountValue = useMemo(
+    () => Object.values(productBasePrices).reduce((sum, v) => sum + Math.max(0, v || 0), 0),
+    [productBasePrices]
+  );
+
+  const selectedLotCount = useMemo(
+    () => selectedGroups.reduce((sum, group) => sum + (allocation.byGroupPreview[group.key] || []).length, 0),
+    [selectedGroups, allocation.byGroupPreview]
+  );
+
   const bonusPointValue = Math.max(0, Math.round(parseFloat(receivedPoint) || 0));
   const shippingCostValue = saleMethod === '郵送' && shippingType === '実費' ? Math.max(0, Math.round(parseFloat(shippingCost) || 0)) : 0;
   const revenue = basePurchaseAmountValue + bonusPointValue - shippingCostValue;
   const profit = revenue - selectedEffectiveCost;
   const pointProfit = revenue - selectedActualCost;
 
-  const allSelected = candidates.length > 0 && candidates.every((p) => selectedIds.includes(p.id));
+  const allSelected = groups.length > 0 && groups.every((g) => selectedGroupKeys.includes(g.key));
 
-  const toggleOne = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]));
-    setProductSalePrices((prev) => (prev[id] !== undefined ? prev : { ...prev, [id]: '' }));
-    setProductSaleQtys((prev) => {
-      if (prev[id] !== undefined) return prev;
-      const p = candidates.find((c) => c.id === id);
-      const qty = p?.quantityAvailable ?? p?.quantityTotal ?? 1;
-      return { ...prev, [id]: String(qty) };
-    });
+  const toggleOne = (group: JanGroup) => {
+    const key = group.key;
+    if (selectedGroupKeys.includes(key)) {
+      setSelectedGroupKeys((prev) => prev.filter((v) => v !== key));
+      return;
+    }
+    setSelectedGroupKeys((prev) => [...prev, key]);
   };
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedIds([]);
+      setSelectedGroupKeys([]);
       return;
     }
-    const ids = candidates.map((p) => p.id);
-    setSelectedIds(ids);
-    setProductSalePrices((prev) => {
-      const next = { ...prev };
-      ids.forEach((id) => {
-        if (next[id] === undefined) next[id] = '';
-      });
-      return next;
-    });
-    setProductSaleQtys((prev) => {
-      const next = { ...prev };
-      candidates.forEach((p) => {
-        if (next[p.id] === undefined) {
-          next[p.id] = String(p.quantityAvailable ?? p.quantityTotal ?? 1);
-        }
-      });
-      return next;
-    });
+    setSelectedGroupKeys(groups.map((g) => g.key));
   };
 
   const submit = async () => {
     setError('');
     setMessage('');
-    if (selectedIds.length === 0) {
-      setErrorModal({
-        title: '入力エラー',
-        detail: '売却対象の商品を選択してください。',
-      });
-      return;
-    }
-    if (!saleLocation.trim()) {
-      setErrorModal({
-        title: '入力エラー',
-        detail: '売却先を選択してください。',
-      });
-      return;
-    }
-    const missing = selectedProducts.filter((p) => {
-      const raw = productSalePrices[p.id];
-      if (raw === undefined || raw.trim() === '') return true;
-      const n = Number(raw);
-      return !Number.isFinite(n) || n < 0;
-    });
-    if (missing.length > 0) {
-      setErrorModal({
-        title: '入力エラー',
-        detail: `選択した商品の買取価格を入力してください（未入力: ${missing.length}件）`,
-      });
+
+    if (selectedGroups.length === 0) {
+      setErrorModal({ title: '入力エラー', detail: '売却対象のJANを選択してください。' });
       return;
     }
 
-    const productBasePrices = selectedProducts.reduce<Record<string, number>>((acc, p) => {
-      acc[p.id] = Math.max(0, Math.round(parseFloat(productSalePrices[p.id] || '0') || 0));
-      return acc;
-    }, {});
+    if (!saleLocation.trim()) {
+      setErrorModal({ title: '入力エラー', detail: '売却先を選択してください。' });
+      return;
+    }
+
+    if (selectedProductIds.length === 0) {
+      setErrorModal({ title: '入力エラー', detail: '売却数量が0件です。内訳で数量を入力してください。' });
+      return;
+    }
+
+    const missingPriceCount = selectedGroups.reduce((count, group) => {
+      return count + group.lots.filter((lot) => {
+        const qty = getLotSoldQty(lot);
+        if (qty <= 0) return false;
+        const raw = lotUnitPrices[lot.product.id];
+        if (raw === undefined || raw.trim() === '') return true;
+        const n = Number(raw);
+        return !Number.isFinite(n) || n < 0;
+      }).length;
+    }, 0);
+
+    if (missingPriceCount > 0) {
+      setErrorModal({ title: '入力エラー', detail: `売却数量を入れたロットの単価を入力してください（未入力 ${missingPriceCount}件）。` });
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const productSaleQtysNum = selectedProducts.reduce<Record<string, number>>((acc, p) => {
-        acc[p.id] = getSoldQty(p);
+      const productSaleMemos = selectedProductIds.reduce<Record<string, string>>((acc, id) => {
+        const memoText = (lotReductionMemos[id] || '').trim();
+        if (memoText) acc[id] = memoText;
         return acc;
       }, {});
 
       const result = await confirmSaleBatchInFirestore({
         userId,
-        productIds: selectedIds,
+        productIds: selectedProductIds,
         saleDate,
         saleLocation: saleLocation.trim(),
         saleMethod,
@@ -163,23 +290,27 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         receivedPoint: bonusPointValue,
         pointRate: 1,
         productBasePrices,
-        productSaleQtys: productSaleQtysNum,
+        productSaleQtys,
+        productSaleMemos,
         memo: memo.trim(),
       });
 
       result.updatedProducts.forEach((p) => {
         updateProduct(p.id, p);
       });
-      setSelectedIds([]);
-      setProductSalePrices({});
-      setProductSaleQtys({});
+
+      setSelectedGroupKeys([]);
+      setExpandedGroups({});
+      setLotSaleQtys({});
+      setLotUnitPrices({});
+      setLotReductionMemos({});
       setReceivedPoint('');
       setMemo('');
-      setMessage(`一括売却を保存しました（${result.updatedProducts.length}件）`);
+      setMessage(`売却登録を保存しました（${result.updatedProducts.length}件）`);
     } catch (e) {
       setErrorModal({
         title: '保存エラー',
-        detail: e instanceof Error ? e.message : '一括売却の保存に失敗しました',
+        detail: e instanceof Error ? e.message : '売却登録の保存に失敗しました',
       });
     } finally {
       setSubmitting(false);
@@ -189,46 +320,56 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
   return (
     <div className="space-y-4">
       <div className="glass-panel p-4 space-y-3">
-        <h2 className="text-lg font-bold text-slate-900">一括売却登録</h2>
+        <h2 className="text-lg font-bold text-slate-900">売却登録</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          <div>
+          <div className="sm:col-span-2 lg:col-span-1">
             <RichDatePicker label="売却日" value={saleDate} onChange={setSaleDate} />
           </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">方法</label>
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
-              {(['来店', '郵送'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setSaleMethod(m)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${saleMethod === m ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
-                >
-                  {m}
-                </button>
-              ))}
+          <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-2">
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">方法</label>
+              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
+                {(['来店', '郵送'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setSaleMethod(m)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${saleMethod === m ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">売却先</label>
+              <select value={saleLocation} onChange={(e) => setSaleLocation(e.target.value as (typeof SALE_LOCATIONS)[number])} className="input-field">
+                {SALE_LOCATIONS.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">売却先</label>
-            <select value={saleLocation} onChange={(e) => setSaleLocation(e.target.value as (typeof SALE_LOCATIONS)[number])} className="input-field">
-              {SALE_LOCATIONS.map((location) => (
-                <option key={location} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">買取総額</label>
-            <NumericInput integer min={0} value={basePurchaseAmountValue} readOnly className="input-field bg-slate-50 text-slate-700" />
+          <div className="sm:col-span-2 lg:col-span-2 grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">買取総額</label>
+              <div className="input-field bg-slate-50 text-slate-700 inline-flex items-center w-full">
+                <span className="font-semibold">{formatCurrency(basePurchaseAmountValue)}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">上乗せP（円）</label>
+              <NumericInput integer min={0} value={receivedPoint} onChange={(e) => setReceivedPoint(e.target.value)} className="input-field" placeholder="0" />
+            </div>
           </div>
           {saleMethod === '郵送' && (
             <div className="sm:col-span-2 lg:col-span-4">
               <label className="block text-xs text-slate-600 mb-1">送料</label>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 gap-1">
-                  {(['着払いキャンペーン', '実費'] as const).map((t) => (
+                  {(['送料込みキャンペーン', '実費'] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
@@ -249,16 +390,12 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
                     placeholder="0"
                   />
                 )}
-                {shippingType === '着払いキャンペーン' && (
-                  <span className="text-xs text-slate-500">送料無料（0円）として計算</span>
+                {shippingType === '送料込みキャンペーン' && (
+                  <span className="text-xs text-slate-500">送料は0円として計算します</span>
                 )}
               </div>
             </div>
           )}
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">上乗せP（円）</label>
-            <NumericInput integer min={0} value={receivedPoint} onChange={(e) => setReceivedPoint(e.target.value)} className="input-field" placeholder="0" />
-          </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-xs text-slate-600 mb-1">メモ</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className="input-field" placeholder="任意" />
@@ -266,11 +403,12 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white/70 p-3 text-sm">
-          <p className="text-slate-700">選択件数: <span className="font-semibold">{selectedProducts.length}件</span></p>
-          <p className="text-slate-700">最終受取: <span className="font-semibold">{formatCurrency(revenue)}</span></p>
-          <p className="text-slate-700">利益: <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(profit)}</span></p>
+          <p className="text-slate-700">選択JAN数: <span className="font-semibold">{selectedGroups.length}件</span></p>
+          <p className="text-slate-700">入力ロット数: <span className="font-semibold">{selectedLotCount}件</span></p>
+          <p className="text-slate-700">総受取額: <span className="font-semibold">{formatCurrency(revenue)}</span></p>
+          <p className="text-slate-700">総利益: <span className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(profit)}</span></p>
           <p className="text-slate-700">P利益: <span className={`font-semibold ${pointProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(pointProfit)}</span></p>
-          <p className="text-xs text-slate-500 mt-1">最終受取 = 買取総額 + 上乗せP - 送料</p>
+          <p className="text-xs text-slate-500 mt-1">総受取額 = 買取総額 + 上乗せP - 送料</p>
         </div>
 
         {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
@@ -283,7 +421,7 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           className="btn-primary w-full inline-flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
-          一括売却を確定
+          売却登録を確定
         </button>
       </div>
 
@@ -300,58 +438,102 @@ export function SaleBatchManager({ products, userId }: SaleBatchManagerProps) {
           </button>
         </div>
 
-        <div className="space-y-2 max-h-[52vh] overflow-auto pr-1">
-          {candidates.length === 0 ? (
-            <p className="text-sm text-slate-500">売却対象の商品がありません</p>
+        <div className="space-y-2 max-h-[55vh] overflow-auto pr-1">
+          {groups.length === 0 ? (
+            <p className="text-sm text-slate-500">売却対象の在庫がありません</p>
           ) : (
-            candidates.map((p) => {
-              const checked = selectedIds.includes(p.id);
-              const qty = p.quantityAvailable ?? p.quantityTotal ?? 1;
+            groups.map((group) => {
+              const checked = selectedGroupKeys.includes(group.key);
+              const expanded = !!expandedGroups[group.key];
+
               return (
-                <label key={p.id} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${checked ? 'border-sky-300 bg-sky-50/60' : 'border-slate-200 bg-white/70'}`}>
-                  <input type="checkbox" checked={checked} onChange={() => toggleOne(p.id)} className="mt-1 h-4 w-4 accent-sky-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 truncate">{p.productName}</p>
-                    <p className="text-xs text-slate-500">{p.purchaseLocation} / 数量 {qty}</p>
-                    <p className="text-xs text-slate-600 mt-1">
-                      実質原価 {formatCurrency(getEffectiveCost(p))} ・ 購入合計 {formatCurrency(getActualPayment(p))}
-                    </p>
-                    {checked && (
-                      <div className="mt-2 flex gap-2 flex-wrap">
-                        {(p.quantityAvailable ?? p.quantityTotal ?? 1) > 1 && (
-                          <div>
-                            <label className="block text-[11px] text-slate-600 mb-1">売却数</label>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setProductSaleQtys((prev) => ({ ...prev, [p.id]: String(Math.max(1, getSoldQty(p) - 1)) }))}
-                                className="w-8 h-9 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-base flex items-center justify-center"
-                              >−</button>
-                              <span className="w-8 text-center text-sm font-semibold text-slate-900">{getSoldQty(p)}</span>
-                              <button
-                                type="button"
-                                onClick={() => setProductSaleQtys((prev) => ({ ...prev, [p.id]: String(Math.min(p.quantityAvailable ?? p.quantityTotal ?? 1, getSoldQty(p) + 1)) }))}
-                                className="w-8 h-9 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-base flex items-center justify-center"
-                              >+</button>
-                              <span className="text-[10px] text-slate-400">/ {p.quantityAvailable ?? p.quantityTotal ?? 1}</span>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-[140px] max-w-[180px]">
-                          <label className="block text-[11px] text-slate-600 mb-1">買取価格</label>
-                          <NumericInput
-                            integer
-                            min={0}
-                            value={productSalePrices[p.id] ?? ''}
-                            onChange={(e) => setProductSalePrices((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                            className="input-field h-9 text-sm"
-                            placeholder="0"
-                          />
-                        </div>
+                <div key={group.key} className={`rounded-xl border p-3 ${checked ? 'border-sky-300 bg-sky-50/60' : 'border-slate-200 bg-white/70'}`}>
+                  <div className="flex items-start gap-3">
+                    <input type="checkbox" checked={checked} onChange={() => toggleOne(group)} className="mt-1 h-4 w-4 accent-sky-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-slate-900 truncate">{group.productName}</p>
+                        {group.janCode && <span className="text-xs text-slate-500">JAN {group.janCode}</span>}
                       </div>
-                    )}
+                      <p className="text-xs text-slate-500 mt-0.5">在庫 {group.totalAvailable} / ロット {group.lots.length}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGroups((prev) => ({ ...prev, [group.key]: !expanded }))}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    >
+                      {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      内訳
+                    </button>
                   </div>
-                </label>
+
+                  {expanded && (
+                    <div className="mt-2 rounded-lg border border-slate-200 bg-white/80 p-2">
+                      <p className="text-xs font-semibold text-slate-700 mb-1">ロット内訳（数量・単価・減額メモ）</p>
+                      <div className="space-y-1">
+                        {group.lots.map((lot) => {
+                          const soldFromLot = getLotSoldQty(lot);
+                          const soldCash = soldFromLot * getLotUnitPrice(lot);
+                          return (
+                            <div key={lot.product.id} className="rounded border border-slate-100 bg-slate-50/70 px-2 py-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs text-slate-700 whitespace-nowrap">{lot.product.purchaseDate} / {lot.product.purchaseLocation}</p>
+                                <p className="text-xs text-slate-500">残 {Math.max(0, lot.availableQty - soldFromLot)} / 在庫 {lot.availableQty}</p>
+                              </div>
+                              {lot.product.memo && <p className="text-xs text-slate-500 mt-0.5 truncate">メモ: {lot.product.memo}</p>}
+                              <div className="mt-1 grid grid-cols-[auto_1fr] sm:grid-cols-[auto_auto_auto_1fr] gap-2 items-end">
+                                <div>
+                                  <label className="block text-[11px] text-slate-600 mb-1">数量</label>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={!checked}
+                                      onClick={() => setLotSaleQtys((prev) => ({ ...prev, [lot.product.id]: String(Math.max(0, soldFromLot - 1)) }))}
+                                      className="w-6 h-6 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold disabled:opacity-40"
+                                    >-</button>
+                                    <span className="w-7 text-center text-xs font-semibold text-slate-900">{soldFromLot}</span>
+                                    <button
+                                      type="button"
+                                      disabled={!checked}
+                                      onClick={() => setLotSaleQtys((prev) => ({ ...prev, [lot.product.id]: String(Math.min(lot.availableQty, soldFromLot + 1)) }))}
+                                      className="w-6 h-6 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold disabled:opacity-40"
+                                    >+</button>
+                                  </div>
+                                </div>
+                                <div className="min-w-[120px]">
+                                  <label className="block text-[11px] text-slate-600 mb-1">単価</label>
+                                  <NumericInput
+                                    integer
+                                    min={0}
+                                    disabled={!checked}
+                                    value={lotUnitPrices[lot.product.id] ?? ''}
+                                    onChange={(e) => setLotUnitPrices((prev) => ({ ...prev, [lot.product.id]: e.target.value }))}
+                                    className="input-field h-8 text-xs"
+                                    placeholder="0"
+                                  />
+                                </div>
+                                <p className="text-[11px] text-slate-600">売却額 {formatCurrency(soldCash)}</p>
+                              </div>
+                              {checked && soldFromLot > 0 && (
+                                <div className="mt-1">
+                                  <label className="block text-[11px] text-slate-600 mb-1">減額メモ</label>
+                                  <input
+                                    value={lotReductionMemos[lot.product.id] ?? ''}
+                                    onChange={(e) =>
+                                      setLotReductionMemos((prev) => ({ ...prev, [lot.product.id]: e.target.value }))
+                                    }
+                                    className="input-field h-8 text-xs"
+                                    placeholder="減額理由（任意）"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })
           )}

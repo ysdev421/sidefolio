@@ -29,11 +29,11 @@
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.16",
+    "firebase-admin": "^13.7.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.2.2",
     "vite": "^5.0.2",
-    "firebase-admin": "^13.7.0",
     "vitest": "^4.0.18"
   }
 }

@@ -582,6 +582,7 @@ export interface ConfirmSaleBatchInput {
   pointRate: number;
   productBasePrices?: Record<string, number>;
   productSaleQtys?: Record<string, number>;
+  productSaleMemos?: Record<string, string>;
   memo?: string;
 }
 
@@ -760,6 +761,7 @@ export async function confirmSaleBatchInFirestore(input: ConfirmSaleBatchInput):
         allocatedSalePrice: allocatedRevenue[idx] || 0,
         allocatedCash: allocatedCash[idx] || 0,
         allocatedPointValue: allocatedPointValue[idx] || 0,
+        reductionMemo: input.productSaleMemos?.[p.id]?.trim() || '',
       };
     }),
     janBreakdown: Array.from(janBreakdownMap.values())
@@ -812,6 +814,7 @@ export interface SaleBatchDetail extends SaleBatchSummary {
     allocatedSalePrice: number;
     allocatedCash: number;
     allocatedPointValue: number;
+    reductionMemo?: string;
   }>;
 }
 
@@ -843,6 +846,7 @@ export async function getSaleBatchDetail(userId: string, batchId: string): Promi
       allocatedSalePrice: toNumberSafe(item.allocatedSalePrice),
       allocatedCash: toNumberSafe(item.allocatedCash),
       allocatedPointValue: toNumberSafe(item.allocatedPointValue),
+      reductionMemo: String(item.reductionMemo || ''),
     })) : [],
   };
 }

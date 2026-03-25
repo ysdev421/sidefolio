@@ -5,7 +5,11 @@ on:
     # 毎日 17:00 UTC = 日本時間 02:00
     - cron: '0 17 * * *'
   workflow_dispatch:
-    # GitHub の画面から手動実行も可能
+    inputs:
+      dry_run:
+        description: 'ドライラン（Firestoreに書き込まない）'
+        type: boolean
+        default: true
 
 jobs:
   fetch-prices:
@@ -27,4 +31,4 @@ jobs:
       - name: 買取価格バッチ実行
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: node scripts/kaitori-price-batch.cjs --interval=7000
+        run: node scripts/kaitori-price-batch.cjs --interval=7000 ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}

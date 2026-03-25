@@ -2,7 +2,7 @@
 import { Copy, Search, SlidersHorizontal } from 'lucide-react';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { EditProductForm } from './EditProductForm';
-import { calculatePointProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
+import { calculatePointProfit, calculateProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
 import type { Product } from '@/types';
 
 interface ProductListProps {
@@ -211,25 +211,30 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
         <h2 className="mb-3 text-sm font-bold tracking-wide">
           <span className={`inline-flex items-center rounded-full px-3 py-1 ${color}`}>{title} {items.length}</span>
         </h2>
-        <div className="space-y-3">{items.map(renderProductCard)}</div>
+        <div className="space-y-3">{items.map((p) => renderProductCard(p))}</div>
       </section>
     );
   };
 
-  const renderProductCard = (product: Product) => (
+  const renderProductCard = (product: Product, showDate = true) => (
     <div key={product.id} className="space-y-1.5">
-      <p className="px-1 text-[11px] text-slate-500">
-        {formatDate(product.purchaseDate)}
-      </p>
+      {showDate && (
+        <p className="px-1 text-[11px] text-slate-500 whitespace-nowrap">
+          {formatDate(product.purchaseDate)}
+        </p>
+      )}
       <div className="card p-2.5 animate-fade-in space-y-2">
       <div className="flex justify-between items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex items-center gap-1.5">
+            <div className="min-w-0 flex items-center gap-1.5 flex-nowrap overflow-hidden">
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap shrink-0 ${statusBadge(product.status)}`}>
+                {statusLabel(product.status)}
+              </span>
               <button
                 type="button"
                 onClick={() => setEditingProduct(product)}
-                className="font-semibold text-slate-900 truncate min-w-0 text-left hover:text-sky-700 transition-colors"
+                className="font-semibold text-slate-900 truncate min-w-0 text-left hover:text-sky-700 transition-colors flex-1"
                 title={product.janCode ? `${product.productName} (JAN:${product.janCode})` : product.productName}
               >
                 {product.productName}
@@ -255,7 +260,7 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
                 </button>
               )}
               {copiedProductId === product.id && (
-                <span className="text-[11px] text-emerald-700 font-semibold shrink-0">コピーしました</span>
+                <span className="hidden sm:inline text-[11px] text-emerald-700 font-semibold shrink-0 whitespace-nowrap">コピーしました</span>
               )}
             </div>
             <p className="text-[11px] text-slate-600 whitespace-nowrap shrink-0">
@@ -282,13 +287,18 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
             </>
           )}
           {product.kaitoriPrice && product.status !== 'sold' && (() => {
-            const diff = product.kaitoriPrice - getEffectiveCost(product);
+            const totalQty = Math.max(1, product.quantityTotal ?? 1);
+            const availableQty = Math.max(0, Math.min(totalQty, product.quantityAvailable ?? totalQty));
+            const remainingEffectiveCost = getEffectiveCost(product) * (availableQty / totalQty);
+            const expectedKaitori = product.kaitoriPrice * availableQty;
+            const diff = expectedKaitori - remainingEffectiveCost;
             return (
               <>
                 <span className="text-slate-300 px-1" aria-hidden>|</span>
                 <p className="text-slate-800 whitespace-nowrap">
                   <span className="text-xs text-soft mr-1">買取wiki</span>
-                  <span className="font-semibold">{formatCurrency(product.kaitoriPrice)}</span>
+                  <span className="font-semibold">{formatCurrency(expectedKaitori)}</span>
+                  <span className="ml-1 text-[10px] text-slate-400">({availableQty}点)</span>
                   {product.kaitoriPriceAt && (() => {
                     const mins = Math.floor((Date.now() - new Date(product.kaitoriPriceAt!).getTime()) / 60000);
                     return <span className="ml-1 text-[10px] text-slate-400">{mins < 60 ? `${mins}分前` : `${Math.floor(mins / 60)}時間前`}</span>;
@@ -303,12 +313,18 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
               </>
             );
           })()}
-          {product.status === 'sold' && product.salePrice && (
+          {product.status === 'sold' && product.salePrice !== undefined && (
             <>
               <span className="text-slate-300 px-1" aria-hidden>|</span>
               <p className="text-slate-800 whitespace-nowrap">
                 <span className="text-xs text-soft mr-1">売却</span>
                 <span className="font-semibold">{formatCurrency(product.salePrice)}</span>
+              </p>
+              <p className="whitespace-nowrap">
+                <span className="text-xs text-soft mr-1">利益(P込)</span>
+                <span className={calculateProfit(product) >= 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600 font-semibold'}>
+                  {calculateProfit(product) >= 0 ? '+' : ''}{formatCurrency(calculateProfit(product))}
+                </span>
               </p>
             </>
           )}
@@ -319,9 +335,6 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
               {product.quantityAvailable ?? product.quantityTotal}/{product.quantityTotal}
             </span>
           )}
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${statusBadge(product.status)}`}>
-            {statusLabel(product.status)}
-          </span>
         </div>
       </div>
       </div>
@@ -471,9 +484,29 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
               </div>
             )}
           </section>
+        ) : sortKey === 'purchaseDateDesc' && (listTab === 'inventory' || listTab === 'all') ? (
+          <section className="space-y-4">
+            {Object.entries(
+              filtered.reduce<Record<string, Product[]>>((acc, p) => {
+                const key = p.purchaseDate || '';
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(p);
+                return acc;
+              }, {})
+            )
+              .sort(([a], [b]) => toTime(b) - toTime(a))
+              .map(([date, items]) => (
+                <div key={date} className="space-y-2">
+                  <p className="px-1 text-[11px] text-slate-500 whitespace-nowrap">{formatDate(date)}</p>
+                  <div className="space-y-3">
+                    {items.map((p) => renderProductCard(p, false))}
+                  </div>
+                </div>
+              ))}
+          </section>
         ) : sortKey === 'purchaseDateDesc' ? (
           <section>
-            <div className="space-y-3">{filtered.map(renderProductCard)}</div>
+            <div className="space-y-3">{filtered.map((p) => renderProductCard(p))}</div>
           </section>
         ) : (
           <>
@@ -495,4 +528,3 @@ export function ProductList({ products, userId, onDelete, initialListTab, hideTa
     </div>
   );
 }
-

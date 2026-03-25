@@ -18,13 +18,15 @@ import { JanScannerModal } from '@/components/JanScannerModal';
 
 interface AddProductFormProps {
   userId: string;
+  initialJanCode?: string;
+  initialProductName?: string;
   onClose?: () => void;
   onGoToMaster?: (janCode: string, productName: string) => void;
 }
 
 const normalizeJanCode = (value: string) => value.replace(/\D/g, '').trim();
 
-export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductFormProps) {
+export function AddProductForm({ userId, initialJanCode, initialProductName, onClose, onGoToMaster }: AddProductFormProps) {
   const isKaitori = true;
   const [formData, setFormData] = useState({
     janCode: '',
@@ -110,6 +112,42 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
 
     setMobileCameraEnabled(isMobile && hasCameraApi);
   }, []);
+
+  useEffect(() => {
+    const normalizedJan = normalizeJanCode(initialJanCode || '');
+    const normalizedName = (initialProductName || '').trim();
+    if (!normalizedJan && !normalizedName) return;
+
+    const matchedMaster = normalizedJan
+      ? masters.find((m) => normalizeJanCode(m.janCode) === normalizedJan)
+      : null;
+    const matchedTemplate = normalizedJan
+      ? templates.find((t) => normalizeJanCode(t.janCode || '') === normalizedJan)
+      : null;
+    const resolvedName = normalizedName || matchedMaster?.productName || '';
+
+    setFormData((prev) => {
+      const nextJan = normalizedJan || prev.janCode;
+      const nextName = resolvedName || prev.productName;
+      const nextLocation = matchedTemplate?.purchaseLocation || prev.purchaseLocation;
+      if (
+        prev.janCode === nextJan &&
+        prev.productName === nextName &&
+        prev.purchaseLocation === nextLocation
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        janCode: nextJan,
+        productName: nextName,
+        purchaseLocation: nextLocation,
+      };
+    });
+    setKaitoriLookup(normalizedJan || resolvedName);
+    setJanNotFound(false);
+    setJanHint(resolvedName ? '商品マスタ登録内容を反映しました' : '');
+  }, [initialJanCode, initialProductName, masters, templates]);
 
   const fillProductNameByJan = async (janInput: string) => {
     const janCode = normalizeJanCode(janInput);
@@ -515,7 +553,7 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
                     {(() => {
                       const purchase = parseFloat(formData.purchasePrice) || 0;
                       const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
-                      return `${purchase - earned} 円`;
+                      return `${(purchase - earned).toLocaleString('ja-JP')} 円`;
                     })()}
                   </span>
                   <span className="ml-2 text-xs text-slate-500">購入金額 - 付与ポイント</span>
@@ -569,5 +607,3 @@ export function AddProductForm({ userId, onClose, onGoToMaster }: AddProductForm
     </div>
   );
 }
-
-

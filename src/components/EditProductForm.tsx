@@ -123,9 +123,15 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
     try {
       const extraPointsNums = extraPoints.map((p) => parseFloat(p) || 0).filter((v) => v !== 0);
       const totalPoint = (parseFloat(formData.point) || 0) + extraPointsNums.reduce((s, v) => s + v, 0);
+      const nextQuantityAvailable = Math.max(0, parseInt(formData.quantityAvailable, 10) || 0);
+      const nextQuantityTotal =
+        formData.status === 'sold'
+          ? Math.max(1, parseInt(formData.quantityTotal, 10) || 1, nextQuantityAvailable)
+          : Math.max(1, nextQuantityAvailable);
       const updates: Partial<Product> = {
         status: formData.status,
-        quantityAvailable: Math.max(0, parseInt(formData.quantityAvailable, 10) || 0),
+        quantityTotal: nextQuantityTotal,
+        quantityAvailable: nextQuantityAvailable,
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
         point: totalPoint,
         extraPoints: extraPointsNums.length > 0 ? extraPointsNums : undefined,
@@ -418,14 +424,14 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                   </p>
                 )}
               </div>
-              <div className="rounded-xl bg-white/70 border border-white/70 p-3 text-sm">
+              <div className="rounded-xl bg-white/70 border border-white/70 px-3 py-2 text-sm">
                 <p className="text-slate-700">
                   実質原価:
                   <span className="ml-2 font-bold text-slate-900">
                     {(() => {
                       const purchase = parseFloat(formData.purchasePrice) || 0;
                       const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
-                      return `${purchase - earned} 円`;
+                      return `${(purchase - earned).toLocaleString('ja-JP')} 円`;
                     })()}
                   </span>
                   <span className="ml-2 text-xs text-slate-500">購入金額 - 付与ポイント</span>

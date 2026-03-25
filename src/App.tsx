@@ -50,6 +50,7 @@ function App() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [masterInitial, setMasterInitial] = useState<{ janCode: string; productName: string } | null>(null);
+  const [addFormInitial, setAddFormInitial] = useState<{ janCode: string; productName: string } | null>(null);
   useEffect(() => {
     if (!user) return;
     const timer = window.setTimeout(() => {
@@ -182,8 +183,9 @@ function App() {
                   userId={user.id}
                   initialJanCode={masterInitial?.janCode}
                   initialProductName={masterInitial?.productName}
-                  onSaved={masterInitial ? () => {
+                  onSaved={masterInitial ? (saved) => {
                     setMasterInitial(null);
+                    setAddFormInitial(saved);
                     setScreen('list');
                     setAppView('system');
                     setShowAddForm(true);
@@ -342,9 +344,15 @@ function App() {
         <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/30" />}>
           <AddProductForm
             userId={user.id}
-            onClose={() => setShowAddForm(false)}
+            initialJanCode={addFormInitial?.janCode}
+            initialProductName={addFormInitial?.productName}
+            onClose={() => {
+              setShowAddForm(false);
+              setAddFormInitial(null);
+            }}
             onGoToMaster={(janCode, productName) => {
               setShowAddForm(false);
+              setAddFormInitial(null);
               setMasterInitial({ janCode, productName });
               setScreen('admin');
               setAppView('productMasterManager');
