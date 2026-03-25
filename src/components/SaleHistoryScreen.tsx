@@ -5,10 +5,12 @@ import {
   cancelSaleBatchInFirestore,
   getSaleBatchDetail,
   getUserRecentSaleBatches,
+  updateSaleBatchHeader,
   updateSaleBatchItemPrices,
   type SaleBatchDetail,
   type SaleBatchSummary,
 } from '@/lib/firestore';
+import { RichDatePicker } from '@/components/RichDatePicker';
 import { useStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
 
@@ -32,6 +34,13 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
   const [editMode, setEditMode] = useState(false);
   const [editPrices, setEditPrices] = useState<Record<string, string>>({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [headerEditMode, setHeaderEditMode] = useState(false);
+  const [editSaleDate, setEditSaleDate] = useState('');
+  const [editSaleLocation, setEditSaleLocation] = useState('');
+  const [editMemo, setEditMemo] = useState('');
+  const [editReceivedPoint, setEditReceivedPoint] = useState('');
+  const [editPointRate, setEditPointRate] = useState('');
+  const [savingHeader, setSavingHeader] = useState(false);
   const [message, setMessage] = useState('');
   const [errorModal, setErrorModal] = useState<{ title: string; detail: string } | null>(null);
   const updateProduct = useStore((state) => state.updateProduct);
@@ -73,6 +82,7 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
         updateProduct(p.id, p);
       });
       setMessage(`一括売却を取り消しました（${result.revertedProducts.length}件）`);
+      setDetailTarget(null);
       await loadRecentBatches();
     } catch (e) {
       setErrorModal({
@@ -92,6 +102,38 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
     });
     setEditPrices(prices);
     setEditMode(true);
+  };
+
+  const startHeaderEdit = () => {
+    if (!detailTarget) return;
+    setEditSaleDate(detailTarget.saleDate);
+    setEditSaleLocation(detailTarget.saleLocation);
+    setEditMemo(detailTarget.memo ?? '');
+    setEditReceivedPoint(String(detailTarget.receivedPoint));
+    setEditPointRate(String(detailTarget.pointRate));
+    setHeaderEditMode(true);
+  };
+
+  const saveHeaderEdit = async () => {
+    if (!detailTarget) return;
+    setSavingHeader(true);
+    try {
+      await updateSaleBatchHeader(userId, detailTarget.id, {
+        saleDate: editSaleDate,
+        saleLocation: editSaleLocation,
+        memo: editMemo,
+        receivedPoint: Math.max(0, parseInt(editReceivedPoint, 10) || 0),
+        pointRate: Math.max(0, parseFloat(editPointRate) || 0),
+      });
+      const updated = await getSaleBatchDetail(userId, detailTarget.id);
+      setDetailTarget(updated);
+      setHeaderEditMode(false);
+      await loadRecentBatches();
+    } catch (e) {
+      setErrorModal({ title: '保存エラー', detail: e instanceof Error ? e.message : '保存に失敗しました' });
+    } finally {
+      setSavingHeader(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -147,19 +189,10 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
                   <p className="text-xs text-slate-600">最終受取: {formatCurrency(batch.totalRevenue)}</p>
                 </button>
                 <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                {batch.canceledAt ? (
+                {batch.canceledAt && (
                   <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600 shrink-0">
                     取り消し済み
                   </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmTarget(batch)}
-                    disabled={!!cancelingBatchId}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-rose-200 text-rose-700 hover:bg-rose-50 transition shrink-0"
-                  >
-                    {cancelingBatchId === batch.id ? '取り消し中...' : '取り消す'}
-                  </button>
                 )}
               </div>
             ))}
@@ -169,17 +202,29 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
 
       {/* 詳細モーダル */}
       {(loadingDetail || detailTarget) && (
-        <div className="fixed inset-0 z-[70] bg-black/50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setDetailTarget(null)}>
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => { setDetailTarget(null); setEditMode(false); setHeaderEditMode(false); }}>
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4 my-8" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h4 className="text-base font-bold text-slate-900">売却詳細</h4>
               <div className="flex items-center gap-2">
-                {!editMode && !detailTarget?.canceledAt && (
-                  <button type="button" onClick={startEdit} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-700 hover:bg-amber-50">
-                    減額修正
-                  </button>
+                {!editMode && !headerEditMode && !detailTarget?.canceledAt && (
+                  <>
+                    <button type="button" onClick={startHeaderEdit} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-sky-300 text-sky-700 hover:bg-sky-50">
+                      基本情報修正
+                    </button>
+                    <button type="button" onClick={startEdit} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-700 hover:bg-amber-50">
+                      減額修正
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => detailTarget && setConfirmTarget(recentBatches.find(b => b.id === detailTarget.id) ?? null)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-rose-200 text-rose-700 hover:bg-rose-50"
+                    >
+                      取り消す
+                    </button>
+                  </>
                 )}
-                <button type="button" onClick={() => { setDetailTarget(null); setEditMode(false); }} className="p-1 rounded-lg hover:bg-slate-100">
+                <button type="button" onClick={() => { setDetailTarget(null); setEditMode(false); setHeaderEditMode(false); }} className="p-1 rounded-lg hover:bg-slate-100">
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
@@ -193,42 +238,85 @@ export function SaleHistoryScreen({ userId }: SaleHistoryScreenProps) {
             ) : detailTarget && (
               <>
                 {/* サマリー */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">売却日</span>
-                    <span className="font-semibold">{formatSaleDate(detailTarget.saleDate)}</span>
+                {headerEditMode ? (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 space-y-3 text-sm">
+                    <RichDatePicker label="売却日" value={editSaleDate} onChange={setEditSaleDate} />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">売却先</label>
+                      <input
+                        type="text"
+                        value={editSaleLocation}
+                        onChange={(e) => setEditSaleLocation(e.target.value)}
+                        className="input-field w-full"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">上乗せP</label>
+                        <NumericInput integer min={0} value={editReceivedPoint} onChange={(e) => setEditReceivedPoint(e.target.value)} className="input-field w-full" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Pレート（倍）</label>
+                        <NumericInput min={0} value={editPointRate} onChange={(e) => setEditPointRate(e.target.value)} className="input-field w-full" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">メモ</label>
+                      <input
+                        type="text"
+                        value={editMemo}
+                        onChange={(e) => setEditMemo(e.target.value)}
+                        className="input-field w-full"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setHeaderEditMode(false)} className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm">
+                        キャンセル
+                      </button>
+                      <button type="button" onClick={saveHeaderEdit} disabled={savingHeader} className="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm inline-flex items-center gap-1">
+                        {savingHeader && <Loader2 className="w-3 h-3 animate-spin" />}
+                        保存
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">売却先</span>
-                    <span className="font-semibold">{detailTarget.saleLocation}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">買取総額</span>
-                    <span className="font-semibold">{formatCurrency(detailTarget.receivedCash)}</span>
-                  </div>
-                  {detailTarget.receivedPoint > 0 && (
+                ) : (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">上乗せポイント</span>
-                      <span className="font-semibold">{detailTarget.receivedPoint}P × {detailTarget.pointRate} = {formatCurrency(detailTarget.receivedPointValue)}</span>
+                      <span className="text-slate-600">売却日</span>
+                      <span className="font-semibold">{formatSaleDate(detailTarget.saleDate)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between border-t border-slate-200 pt-1 mt-1">
-                    <span className="text-slate-600">最終受取</span>
-                    <span className="font-bold text-slate-900">{formatCurrency(detailTarget.totalRevenue)}</span>
-                  </div>
-                  {detailTarget.memo && (
                     <div className="flex justify-between">
-                      <span className="text-slate-600">メモ</span>
-                      <span className="font-semibold text-right max-w-[60%]">{detailTarget.memo}</span>
+                      <span className="text-slate-600">売却先</span>
+                      <span className="font-semibold">{detailTarget.saleLocation}</span>
                     </div>
-                  )}
-                  {detailTarget.canceledAt && (
-                    <div className="flex justify-between text-rose-600">
-                      <span>取り消し済み</span>
-                      <span className="font-semibold">{detailTarget.canceledAt.slice(0, 10)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">買取総額</span>
+                      <span className="font-semibold">{formatCurrency(detailTarget.receivedCash)}</span>
                     </div>
-                  )}
-                </div>
+                    {detailTarget.receivedPoint > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">上乗せポイント</span>
+                        <span className="font-semibold">{detailTarget.receivedPoint}P × {detailTarget.pointRate} = {formatCurrency(detailTarget.receivedPointValue)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-slate-200 pt-1 mt-1">
+                      <span className="text-slate-600">最終受取</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(detailTarget.totalRevenue)}</span>
+                    </div>
+                    {detailTarget.memo && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">メモ</span>
+                        <span className="font-semibold text-right max-w-[60%]">{detailTarget.memo}</span>
+                      </div>
+                    )}
+                    {detailTarget.canceledAt && (
+                      <div className="flex justify-between text-rose-600">
+                        <span>取り消し済み</span>
+                        <span className="font-semibold">{detailTarget.canceledAt.slice(0, 10)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 商品明細 */}
                 {detailTarget.items.length > 0 && (

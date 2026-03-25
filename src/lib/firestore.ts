@@ -260,32 +260,28 @@ export async function getUserTemplateByJanFromProducts(
 
 export async function getJanMasterByCode(
   janCode: string
-): Promise<{ janCode: string; productName: string } | null> {
+): Promise<{ janCode: string; productName: string; kaitoriPrice?: number } | null> {
   const normalized = normalizeJanCode(janCode);
   if (!normalized) return null;
+
+  const toResult = (data: any): { janCode: string; productName: string; kaitoriPrice?: number } => ({
+    janCode: normalized,
+    productName: String(data.productName),
+    ...(data.kaitoriPrice ? { kaitoriPrice: Number(data.kaitoriPrice) } : {}),
+  });
 
   const ref = doc(db, 'jan_master', normalized);
   const snap = await getDoc(ref);
   if (snap.exists()) {
     const data = snap.data() as any;
-    if (data?.productName) {
-      return {
-        janCode: normalized,
-        productName: String(data.productName),
-      };
-    }
+    if (data?.productName) return toResult(data);
   }
 
   const q = query(collection(db, 'jan_master'), where('janCode', '==', normalized), limit(1));
   const rows = await getDocs(q);
   if (!rows.empty) {
     const row = rows.docs[0].data() as any;
-    if (row?.productName) {
-      return {
-        janCode: normalized,
-        productName: String(row.productName),
-      };
-    }
+    if (row?.productName) return toResult(row);
   }
 
   // Backward compatibility: legacy rows may store janCode as number.
@@ -295,12 +291,7 @@ export async function getJanMasterByCode(
     const rowsNum = await getDocs(qNum);
     if (!rowsNum.empty) {
       const rowNum = rowsNum.docs[0].data() as any;
-      if (rowNum?.productName) {
-        return {
-          janCode: normalized,
-          productName: String(rowNum.productName),
-        };
-      }
+      if (rowNum?.productName) return toResult(rowNum);
     }
   }
 
@@ -888,6 +879,51 @@ export async function updateSaleBatchItemPrices(
     const productSnap = await getDoc(productRef);
     if (productSnap.exists() && String(productSnap.data()?.userId || '') === userId) {
       wb.update(productRef, { salePrice: price, updatedAt: Timestamp.now() });
+    }
+  }
+
+  await wb.commit();
+}
+
+export async function updateSaleBatchHeader(
+  userId: string,
+  batchId: string,
+  fields: { saleDate?: string; saleLocation?: string; memo?: string; receivedPoint?: number; pointRate?: number }
+): Promise<void> {
+  const batchRef = doc(db, 'sale_batches', batchId);
+  const snap = await getDoc(batchRef);
+  if (!snap.exists()) throw new Error('売却バッチが見つかりません');
+  const d = snap.data() as any;
+  if (String(d.userId || '') !== userId) throw new Error('権限がありません');
+
+  const receivedPoint = fields.receivedPoint ?? toNumberSafe(d.receivedPoint);
+  const pointRate = fields.pointRate ?? toNumberSafe(d.pointRate);
+  const receivedPointValue = Math.round(receivedPoint * pointRate);
+  const receivedCash = toNumberSafe(d.receivedCash);
+  const totalRevenue = receivedCash + receivedPointValue;
+
+  const wb = writeBatch(db);
+  wb.update(batchRef, {
+    ...fields,
+    receivedPointValue,
+    totalRevenue,
+    updatedAt: Timestamp.now(),
+  });
+
+  // 各商品にも saleDate / saleLocation を反映
+  const productIds: string[] = Array.isArray(d.productIds)
+    ? d.productIds.map((v: unknown) => String(v || '')).filter(Boolean)
+    : (Array.isArray(d.items) ? d.items.map((item: any) => String(item.productId || '')) : []);
+
+  for (const productId of productIds) {
+    if (!productId) continue;
+    const productRef = doc(db, 'products', productId);
+    const productSnap = await getDoc(productRef);
+    if (productSnap.exists() && String(productSnap.data()?.userId || '') === userId) {
+      const update: Record<string, any> = { updatedAt: Timestamp.now() };
+      if (fields.saleDate) update.saleDate = fields.saleDate;
+      if (fields.saleLocation) update.saleLocation = fields.saleLocation;
+      wb.update(productRef, update);
     }
   }
 

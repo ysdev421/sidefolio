@@ -1,0 +1,42 @@
+name: kaitori.wiki 全商品クロール
+
+on:
+  schedule:
+    # 毎週月曜日 17:00 UTC = 火曜日 02:00 JST
+    - cron: '0 17 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'ドライラン（Firestoreに書き込まない）'
+        type: boolean
+        default: true
+      start_page:
+        description: '開始ページ（途中再開用）'
+        type: number
+        default: 1
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 依存パッケージインストール
+        run: npm ci
+
+      - name: クロール実行
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node scripts/kaitori-wiki-crawl.cjs \
+            --interval=7000 \
+            --start-page=${{ inputs.start_page || 1 }} \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}

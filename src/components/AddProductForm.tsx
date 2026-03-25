@@ -4,6 +4,7 @@ import { NumericInput } from '@/components/NumericInput';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { useProducts } from '@/hooks/useProducts';
 import {
+  getJanMasterByCode,
   getPurchaseLocationUsageCounts,
   getUserProductMasters,
   getUserPurchaseLocations,
@@ -167,6 +168,19 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
         purchaseLocation: template?.purchaseLocation || prev.purchaseLocation,
       }));
       setJanHint('商品マスタから商品名を補完しました');
+      return;
+    }
+
+    // jan_master（クロールデータ）から検索
+    const crawlMaster = await getJanMasterByCode(janCode);
+    if (crawlMaster) {
+      setFormData((prev) => ({
+        ...prev,
+        janCode,
+        productName: crawlMaster.productName,
+      }));
+      setJanHint('買取wikiから商品名を補完しました');
+      setJanNotFound(false);
       return;
     }
 
