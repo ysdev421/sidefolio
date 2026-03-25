@@ -226,7 +226,7 @@ export function Dashboard({ products, allProducts, periodFilter, showMoM = true 
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-soft font-semibold tracking-wide">{stat.label}</p>
-                <p className={`text-base sm:text-lg font-black truncate ${(stat as any).negative ? 'text-rose-600' : (stat as any).positive ? ((stat as any).positiveBlue ? 'text-sky-600' : 'text-emerald-600') : 'text-slate-900'}`}>{stat.value}</p>
+                <p className={`text-base sm:text-lg font-black truncate ${(stat as any).negative ? 'text-rose-600' : (stat as any).positive ? ('text-emerald-600') : 'text-slate-900'}`}>{stat.value}</p>
                 {stat.sub && <p className={`text-xs font-semibold ${stat.subTone}`}>{stat.sub}</p>}
               </div>
             </div>
