@@ -17,7 +17,7 @@ import { formatCurrency } from '@/lib/utils';
 const formatSaleDate = (dateStr: string) => {
   const d = new Date(dateStr);
   const days = ['日', '月', '火', '水', '木', '金', '土'];
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${days[d.getDay()]}）`;
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${days[d.getDay()]})`;
 };
 
 interface SaleHistoryScreenProps {

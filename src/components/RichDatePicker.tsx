@@ -55,7 +55,7 @@ export function RichDatePicker({ label = '日付', value, onChange }: RichDatePi
         <span>
           {(() => {
             const d = parseIsoDate(value);
-            return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
+            return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAYS[d.getDay()]})`;
           })()}
         </span>
         <CalendarDays className="w-4 h-4 text-slate-500" />
