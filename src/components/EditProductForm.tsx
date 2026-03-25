@@ -304,13 +304,14 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
               <div className="inline-flex items-center gap-1.5">
                 <button
                   type="button"
+                  disabled={product.status === 'sold'}
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
                       quantityAvailable: String(Math.max(0, (parseInt(prev.quantityAvailable, 10) || 0) - 1)),
                     }))
                   }
-                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   title="残数を減らす"
                 >
                   -
@@ -318,6 +319,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 <NumericInput
                   integer
                   min={0}
+                  readOnly={product.status === 'sold'}
                   value={formData.quantityAvailable}
                   onChange={(e) =>
                     setFormData({
@@ -329,13 +331,14 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                 />
                 <button
                   type="button"
+                  disabled={product.status === 'sold'}
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
                       quantityAvailable: String(Math.max(0, (parseInt(prev.quantityAvailable, 10) || 0) + 1)),
                     }))
                   }
-                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                  className="w-9 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   title="残数を増やす"
                 >
                   +
