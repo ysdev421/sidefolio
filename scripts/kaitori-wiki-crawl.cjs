@@ -126,7 +126,7 @@ async function main() {
           const ref = db.collection('jan_master').doc(p.janCode);
           const existing = await ref.get();
 
-          if (existing.exists()) {
+          if (existing.exists) {
             const prev = existing.data();
             if (prev.kaitoriPrice !== p.price) {
               await db.collection('kaitoriPriceHistory').add({
