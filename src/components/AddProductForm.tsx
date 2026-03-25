@@ -533,10 +533,14 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
             </div>
           </div>
 
-          <div className="glass-panel p-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div className="glass-panel p-3 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">購入金額合計 <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500 text-white tracking-wide align-middle">必須</span> <span className="font-normal text-[11px] text-slate-500">ポイント利用分も含む</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  購入金額合計
+                  <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500 text-white tracking-wide align-middle">必須</span>
+                  <span className="block text-[11px] font-normal text-slate-500 mt-0.5">ポイント利用分も含む</span>
+                </label>
                 <NumericInput
                   integer
                   value={formData.purchasePrice}
@@ -548,7 +552,7 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                 {fieldErrors.purchasePrice && <p className="mt-1 text-xs text-rose-600">{fieldErrors.purchasePrice}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">付与ポイント</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">付与ポイント</label>
                 <NumericInput
                   integer
                   value={formData.point}
@@ -592,18 +596,18 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                   </p>
                 )}
               </div>
-              <div className="rounded-xl bg-white/70 border border-white/70 p-3 text-sm">
-                <p className="text-slate-700">
-                  実質原価:
-                  <span className="ml-2 font-bold text-slate-900">
-                    {(() => {
-                      const purchase = parseFloat(formData.purchasePrice) || 0;
-                      const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
-                      return `${(purchase - earned).toLocaleString('ja-JP')} 円`;
-                    })()}
-                  </span>
-                  <span className="ml-2 text-xs text-slate-500">購入金額 - 付与ポイント</span>
-                </p>
+            </div>
+            <div className="rounded-xl bg-white/60 border border-white/80 px-3 py-2 flex items-center justify-between">
+              <span className="text-sm text-slate-600">実質原価</span>
+              <div className="text-right">
+                <span className="text-base font-bold text-slate-900">
+                  {(() => {
+                    const purchase = parseFloat(formData.purchasePrice) || 0;
+                    const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
+                    return (purchase - earned).toLocaleString('ja-JP');
+                  })()} 円
+                </span>
+                <span className="block text-[11px] text-slate-400">購入金額 - 付与P</span>
               </div>
             </div>
           </div>
