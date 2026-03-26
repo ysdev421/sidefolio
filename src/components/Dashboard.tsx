@@ -161,7 +161,12 @@ function DonutChart({ data }: { data: { label: string; value: number }[] }) {
   return (
     <div className="flex flex-col sm:flex-row items-center gap-4">
       <svg viewBox="0 0 120 120" className="w-32 h-32 shrink-0">
-        {slices.map((s, i) => {
+        {slices.length === 1 ? (
+          <>
+            <circle cx={cx} cy={cy} r={R} fill={slices[0].color} />
+            <circle cx={cx} cy={cy} r={r} fill="white" />
+          </>
+        ) : slices.map((s, i) => {
           const start = polarToXY(s.startAngle, R);
           const end = polarToXY(s.endAngle, R);
           const startInner = polarToXY(s.startAngle, r);
