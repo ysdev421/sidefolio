@@ -562,7 +562,10 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                 {fieldErrors.purchasePrice && <p className="mt-1 text-xs text-rose-600">{fieldErrors.purchasePrice}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">付与ポイント</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  付与ポイント
+                  <span className="block text-[11px] font-normal text-slate-500 mt-0.5 invisible">_</span>
+                </label>
                 <NumericInput
                   integer
                   value={formData.point}
