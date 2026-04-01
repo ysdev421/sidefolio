@@ -203,6 +203,7 @@ function momText(value: number | null) {
 
 export function Dashboard({ products, allProducts, periodFilter, showMoM = true, redemptions = [] }: DashboardProps) {
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'pointProfit'>('revenue');
+  const [includeRedemptionsInProfit, setIncludeRedemptionsInProfit] = useState(false);
 
   const summary = calculateProfitSummary(products);
 
@@ -223,6 +224,7 @@ export function Dashboard({ products, allProducts, periodFilter, showMoM = true,
     });
   }, [redemptions, periodFilter]);
   const totalRedemptions = filteredRedemptions.reduce((s, r) => s + r.amount, 0);
+  const redemptionAdjust = includeRedemptionsInProfit ? totalRedemptions : 0;
 
   const mom = calcMoM(allProducts, periodFilter);
   const inventoryMom = calcInventoryMoM(allProducts, periodFilter);
@@ -234,13 +236,26 @@ export function Dashboard({ products, allProducts, periodFilter, showMoM = true,
 
   const stats = [
     { label: '総売上', value: formatCurrency(summary.totalRevenue), sub: showMoM ? momText(mom.revenue) : null, subTone: mom.revenue === null ? 'text-slate-500' : mom.revenue >= 0 ? 'text-emerald-600' : 'text-rose-600', icon: DollarSign, tone: 'from-sky-100 to-cyan-100 text-sky-700' },
-    { label: '粗利', value: formatCurrency(summary.totalPointProfit + totalRedemptions), sub: totalRedemptions > 0 ? `還元+${formatCurrency(totalRedemptions)}含む` : (showMoM ? momText(mom.pointProfit) : null), subTone: 'text-violet-600', icon: TrendingUp, tone: 'from-emerald-100 to-green-100 text-emerald-700', negative: (summary.totalPointProfit + totalRedemptions) < 0, positive: (summary.totalPointProfit + totalRedemptions) > 0 },
-    { label: '粗利（P含む）', value: formatCurrency(summary.totalProfit + totalRedemptions), sub: totalRedemptions > 0 ? `還元+${formatCurrency(totalRedemptions)}含む` : (showMoM ? momText(mom.profit) : null), subTone: 'text-violet-600', icon: TrendingUp, tone: 'from-teal-100 to-emerald-100 text-teal-700', negative: (summary.totalProfit + totalRedemptions) < 0, positive: (summary.totalProfit + totalRedemptions) > 0 },
+    { label: '粗利', value: formatCurrency(summary.totalPointProfit + redemptionAdjust), sub: showMoM ? momText(mom.pointProfit) : null, subTone: 'text-violet-600', icon: TrendingUp, tone: 'from-emerald-100 to-green-100 text-emerald-700', negative: (summary.totalPointProfit + redemptionAdjust) < 0, positive: (summary.totalPointProfit + redemptionAdjust) > 0 },
+    { label: '粗利（P含む）', value: formatCurrency(summary.totalProfit + redemptionAdjust), sub: showMoM ? momText(mom.profit) : null, subTone: 'text-violet-600', icon: TrendingUp, tone: 'from-teal-100 to-emerald-100 text-teal-700', negative: (summary.totalProfit + redemptionAdjust) < 0, positive: (summary.totalProfit + redemptionAdjust) > 0 },
     { label: '在庫金額', value: formatCurrency(summary.inventoryValue), sub: showMoM ? momText(inventoryMom) : null, subTone: inventoryMom === null ? 'text-slate-500' : inventoryMom >= 0 ? 'text-emerald-600' : 'text-rose-600', icon: Package, tone: 'from-amber-100 to-orange-100 text-amber-700' },
   ];
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setIncludeRedemptionsInProfit((v) => !v)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+            includeRedemptionsInProfit
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-white border-slate-200 text-slate-600'
+          }`}
+        >
+          {includeRedemptionsInProfit ? `還元を利益に含める ON（${formatCurrency(totalRedemptions)}）` : '還元を利益に含める OFF'}
+        </button>
+      </div>
       {/* 統計カード（横並びレイアウト） */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map((stat, index) => {

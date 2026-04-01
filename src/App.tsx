@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useState } from 'react';
-import { BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
+import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -49,9 +49,12 @@ const GiftCardManager = lazy(() =>
 const PointSiteRedemptionManager = lazy(() =>
   import('@/components/PointSiteRedemptionManager').then((m) => ({ default: m.PointSiteRedemptionManager }))
 );
+const GithubActionsMonitor = lazy(() =>
+  import('@/components/GithubActionsMonitor').then((m) => ({ default: m.GithubActionsMonitor }))
+);
 
 type Screen = 'summary' | 'list' | 'sale' | 'saleHistory' | 'admin';
-type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager' | 'pointSiteRedemptionManager';
+type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager' | 'pointSiteRedemptionManager' | 'githubActionsMonitor';
 
 function App() {
   const { authLoading } = useAuth();
@@ -225,6 +228,8 @@ function App() {
                 <GiftCardManager userId={user.id} products={products} />
               ) : appView === 'pointSiteRedemptionManager' ? (
                 <PointSiteRedemptionManager userId={user.id} />
+              ) : appView === 'githubActionsMonitor' ? (
+                <GithubActionsMonitor userId={user.id} />
               ) : appView === 'adminJanManager' && isAdmin ? (
                 <AdminJanManager />
               ) : null}
@@ -240,6 +245,7 @@ function App() {
                   { view: 'productMasterManager' as const, label: '商品マスタ\n管理', icon: BookOpen, color: 'from-emerald-100 to-green-100 text-emerald-600' },
                   { view: 'giftCardManager' as const, label: 'ギフトカード\n管理', icon: CreditCard, color: 'from-sky-100 to-indigo-100 text-sky-600' },
                   { view: 'pointSiteRedemptionManager' as const, label: 'ポイントサイト\n還元管理', icon: History, color: 'from-violet-100 to-purple-100 text-violet-600' },
+                  { view: 'githubActionsMonitor' as const, label: 'GitHub Actions\n監視', icon: Activity, color: 'from-indigo-100 to-blue-100 text-indigo-700' },
                   { view: 'expenseManager' as const, label: '経費管理', icon: Receipt, color: 'from-rose-100 to-pink-100 text-rose-600' },
                   { view: 'annualSummary' as const, label: '年間サマリー\n（確定申告用）', icon: FileText, color: 'from-amber-100 to-orange-100 text-amber-600' },
                   ...(isAdmin ? [{ view: 'adminJanManager' as const, label: 'JAN抽出/投入\n（管理者）', icon: Database, color: 'from-slate-100 to-slate-200 text-slate-600' }] : []),
