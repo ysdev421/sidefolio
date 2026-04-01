@@ -49,6 +49,9 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
   const [janHint, setJanHint] = useState('');
   const [janNotFound, setJanNotFound] = useState(false);
   const [extraPoints, setExtraPoints] = useState<string[]>([]);
+  const [showProrate, setShowProrate] = useState(false);
+  const [prorateTotal, setProrateTotal] = useState('');
+  const [proratePoint, setProratePoint] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [mobileCameraEnabled, setMobileCameraEnabled] = useState(false);
   const [kaitoriLookup, setKaitoriLookup] = useState('');
@@ -338,6 +341,9 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
       });
       setJanHint('');
       setExtraPoints([]);
+      setShowProrate(false);
+      setProrateTotal('');
+      setProratePoint('');
       setShowBreakdown(false);
       setBreakdownGiftUsages([]);
       setBreakdownCash('');
@@ -573,6 +579,56 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                   className="input-field"
                   placeholder="0"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowProrate((v) => !v)}
+                  className="mt-1.5 text-xs text-violet-600 hover:text-violet-700 font-semibold"
+                >
+                  {showProrate ? '▲ 按分を閉じる' : '÷ まとめ買い按分'}
+                </button>
+                {showProrate && (
+                  <div className="mt-2 p-2 rounded-xl bg-violet-50 border border-violet-100 space-y-2">
+                    <p className="text-[11px] text-violet-700 font-semibold">まとめ買い全体の数値を入力すると、この商品の割合で自動計算します</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] text-slate-600 mb-0.5">全体合計金額</label>
+                        <NumericInput
+                          integer
+                          value={prorateTotal}
+                          onChange={(e) => setProrateTotal(e.target.value)}
+                          className="input-field py-1.5 text-sm"
+                          placeholder="例: 5000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-600 mb-0.5">全体合計P</label>
+                        <NumericInput
+                          integer
+                          value={proratePoint}
+                          onChange={(e) => setProratePoint(e.target.value)}
+                          className="input-field py-1.5 text-sm"
+                          placeholder="例: 50"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const total = parseFloat(prorateTotal) || 0;
+                        const totalP = parseFloat(proratePoint) || 0;
+                        const price = parseFloat(formData.purchasePrice) || 0;
+                        if (total > 0 && totalP > 0 && price > 0) {
+                          const allocated = Math.round(totalP * (price / total));
+                          setFormData((prev) => ({ ...prev, point: String(allocated) }));
+                          setShowProrate(false);
+                        }
+                      }}
+                      className="w-full py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition"
+                    >
+                      按分して反映
+                    </button>
+                  </div>
+                )}
                 {extraPoints.map((v, i) => (
                   <div key={i} className="flex items-center gap-1 mt-1">
                     <span className="text-slate-400 text-xs font-bold">+</span>
