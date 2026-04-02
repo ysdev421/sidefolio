@@ -128,6 +128,35 @@ export interface KaitoriPriceHistory {
   recordedAt: string;
 }
 
+export const KEIKOJI_HOLD_DAYS = [31, 91, 151, 181, 211, 365] as const;
+export type KeikojiHoldDays = typeof KEIKOJI_HOLD_DAYS[number];
+
+export const KEIKOJI_HOLD_MONTHS: Record<KeikojiHoldDays, number> = {
+  31: 1, 91: 3, 151: 5, 181: 6, 211: 7, 365: 12,
+};
+
+export interface KeikojiContract {
+  id: string;
+  userId: string;
+  phoneNumber: string;
+  carrier: string;
+  contractedAt: string;         // YYYY-MM-DD
+  holdDays: KeikojiHoldDays;
+  adminFee: number;
+  monthlyFee: number;
+  deviceName: string;
+  deviceCost: number;
+  salePrice?: number;
+  cashback?: number;
+  contractStore?: string;
+  voicePlan?: string;
+  dataPlan?: string;
+  status: 'active' | 'terminated';
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProfitSummary {
   totalProducts: number;
   totalRevenue: number;

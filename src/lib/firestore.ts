@@ -17,7 +17,7 @@
   where,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Expense, ExpenseCategory, GiftCard, KaitoriPriceHistory, PointSiteRedemption, Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
+import type { Expense, ExpenseCategory, GiftCard, KaitoriPriceHistory, KeikojiContract, PointSiteRedemption, Product, ProductMaster, ProductTemplate, SaleRecord } from '@/types';
 
 export async function addProductToFirestore(
   userId: string,
@@ -1299,5 +1299,67 @@ export async function updatePointSiteRedemption(
 
 export async function deletePointSiteRedemption(id: string): Promise<void> {
   await deleteDoc(doc(db, 'point_site_redemptions', id));
+}
+
+// ケーコジ回線管理
+export async function getUserKeikojiContracts(userId: string): Promise<KeikojiContract[]> {
+  const q = query(collection(db, 'keikoji_contracts'), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  return snap.docs
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((d: any) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.userId,
+        phoneNumber: data.phoneNumber ?? '',
+        carrier: data.carrier ?? '',
+        contractedAt: toIso(data.contractedAt),
+        holdDays: data.holdDays,
+        adminFee: data.adminFee ?? 0,
+        monthlyFee: data.monthlyFee ?? 0,
+        deviceName: data.deviceName ?? '',
+        deviceCost: data.deviceCost ?? 0,
+        salePrice: data.salePrice ?? undefined,
+        cashback: data.cashback ?? undefined,
+        contractStore: data.contractStore ?? undefined,
+        voicePlan: data.voicePlan ?? undefined,
+        dataPlan: data.dataPlan ?? undefined,
+        status: data.status ?? 'active',
+        memo: data.memo ?? undefined,
+        createdAt: toIso(data.createdAt),
+        updatedAt: toIso(data.updatedAt),
+      } as KeikojiContract;
+    })
+    .sort((a: KeikojiContract, b: KeikojiContract) => b.contractedAt.localeCompare(a.contractedAt));
+}
+
+export async function addKeikojiContract(
+  userId: string,
+  data: Omit<KeikojiContract, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+  const docRef = await addDoc(collection(db, 'keikoji_contracts'), {
+    ...clean,
+    userId,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export async function updateKeikojiContract(
+  id: string,
+  data: Partial<Omit<KeikojiContract, 'id' | 'userId' | 'createdAt'>>
+): Promise<void> {
+  const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+  await updateDoc(doc(db, 'keikoji_contracts', id), {
+    ...clean,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function deleteKeikojiContract(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'keikoji_contracts', id));
 }
 

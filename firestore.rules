@@ -108,5 +108,11 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if false;
     }
+
+    match /keikoji_contracts/{docId} {
+      allow read: if readAllowed();
+      allow update, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+    }
   }
 }
