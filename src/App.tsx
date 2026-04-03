@@ -56,8 +56,11 @@ const GithubActionsMonitor = lazy(() =>
 const KeikojiApp = lazy(() =>
   import('@/components/KeikojiApp').then((m) => ({ default: m.KeikojiApp }))
 );
+const SidefolioAnnualSummary = lazy(() =>
+  import('@/components/SidefolioAnnualSummary').then((m) => ({ default: m.SidefolioAnnualSummary }))
+);
 
-type AppSection = 'home' | 'sedori' | 'keikoji';
+type AppSection = 'home' | 'sedori' | 'keikoji' | 'annualSummary';
 type Screen = 'summary' | 'list' | 'sale' | 'saleHistory' | 'admin';
 type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager' | 'pointSiteRedemptionManager' | 'githubActionsMonitor';
 
@@ -193,7 +196,7 @@ function App() {
     return `${fmtYmd(targets[0])} - ${fmtYmd(targets[targets.length - 1])}`;
   })();
 
-  const handleSelectSection = (section: 'sedori' | 'keikoji') => {
+  const handleSelectSection = (section: 'sedori' | 'keikoji' | 'annualSummary') => {
     setAppSection(section);
     if (section === 'sedori') {
       setScreen('list');
@@ -223,6 +226,8 @@ function App() {
               keikojiContracts={keikojiContracts}
               onSelectSection={handleSelectSection}
             />
+          ) : appSection === 'annualSummary' ? (
+            <SidefolioAnnualSummary userId={user.id} products={filteredProducts} />
           ) : appSection === 'keikoji' ? (
             <KeikojiApp userId={user.id} />
           ) : (

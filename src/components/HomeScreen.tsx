@@ -1,4 +1,4 @@
-import { ChevronRight, Package, Smartphone } from 'lucide-react';
+import { ChevronRight, FileText, Package, Smartphone } from 'lucide-react';
 import type { KeikojiContract, KeikojiHoldDays, Product, PointSiteRedemption } from '@/types';
 import { KEIKOJI_HOLD_MONTHS } from '@/types';
 
@@ -6,7 +6,7 @@ interface HomeScreenProps {
   products: Product[];
   redemptions: PointSiteRedemption[];
   keikojiContracts: KeikojiContract[];
-  onSelectSection: (section: 'sedori' | 'keikoji') => void;
+  onSelectSection: (section: 'sedori' | 'keikoji' | 'annualSummary') => void;
 }
 
 function calcKeikojiProfit(c: KeikojiContract): number {
@@ -124,6 +124,21 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
                 </span>
                 　運用中 {keikojiActive}回線
               </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+          </button>
+
+          {/* 年間サマリー */}
+          <button
+            onClick={() => onSelectSection('annualSummary')}
+            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/90 active:scale-[0.98] transition text-left"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-6 h-6 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-900">年間サマリー</p>
+              <p className="text-xs text-slate-500 mt-0.5">全副業合算・確定申告用</p>
             </div>
             <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
           </button>

@@ -5,7 +5,7 @@ import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 
 interface HeaderProps {
   userName?: string;
-  appSection?: 'home' | 'sedori' | 'keikoji';
+  appSection?: 'home' | 'sedori' | 'keikoji' | 'annualSummary';
   onBack?: () => void;
 }
 
@@ -13,6 +13,7 @@ const SECTION_LABELS: Record<string, { sub: string; title: string; gradient: str
   home: { sub: 'Side Business Portfolio', title: 'SideFolio', gradient: 'from-violet-700 via-indigo-600 to-blue-700' },
   sedori: { sub: 'Resale Management', title: 'せどり管理', gradient: 'from-cyan-700 via-sky-600 to-blue-700' },
   keikoji: { sub: 'MNP Management', title: 'ケーコジ', gradient: 'from-violet-700 via-purple-600 to-indigo-700' },
+  annualSummary: { sub: 'Annual Summary', title: '年間サマリー', gradient: 'from-amber-600 via-orange-500 to-rose-500' },
 };
 
 export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
