@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useEffect, useState } from 'react';
+﻿import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
@@ -209,6 +209,19 @@ function App() {
     setAppView('system');
   };
 
+  const touchStartX = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx > 60 && touchStartX.current < 40 && appSection !== 'home') {
+      handleBackToHome();
+    }
+    touchStartX.current = null;
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Header
@@ -217,7 +230,11 @@ function App() {
         onBack={appSection !== 'home' ? handleBackToHome : undefined}
       />
 
-      <main className={`flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 ${appSection === 'sedori' ? 'pb-24' : 'pb-6'}`}>
+      <main
+        className={`flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 ${appSection === 'sedori' ? 'pb-24' : 'pb-6'}`}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-600">読み込み中...</div>}>
           {appSection === 'home' ? (
             <HomeScreen
