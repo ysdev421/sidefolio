@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useState } from 'react';
-import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, Home, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
+import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -425,13 +425,6 @@ function App() {
                 </button>
               );
             })}
-            <button
-              onClick={handleBackToHome}
-              className="relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors active:opacity-60"
-            >
-              <Home className="w-5 h-5 text-slate-400" strokeWidth={1.8} />
-              <span className="text-[10px] font-medium text-slate-400">ホーム</span>
-            </button>
           </div>
         </nav>
       )}
