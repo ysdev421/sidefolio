@@ -57,7 +57,8 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
   const endInventory = products.filter((p) => p.status === 'inventory').reduce((s, p) => s + getRemainingActualPayment(p), 0);
   const totalRedemptions = redemptions.reduce((s, r) => s + r.amount, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const sedoriTaxable = profitCash + totalRedemptions - totalExpenses;
+  const sedoriTaxable = profitCash - totalExpenses;
+  const sedoriProfitWithRedemptions = profitCash + totalRedemptions;
 
   // ケーコジ
   const keikojiProfit = keikojiContracts.reduce((s, c) => s + calcKeikojiProfit(c), 0);
@@ -90,7 +91,8 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
           <div>
             <p className="text-slate-400 mb-0.5">せどり 概算課税所得</p>
             <p className={`font-bold text-sm ${sedoriTaxable >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(sedoriTaxable)}</p>
-            <p className="text-slate-400 mt-0.5">粗利{formatCurrency(profitCash)} + 還元{formatCurrency(totalRedemptions)} - 経費{formatCurrency(totalExpenses)}</p>
+            <p className="text-slate-400 mt-0.5">粗利{formatCurrency(profitCash)} - 経費{formatCurrency(totalExpenses)}（還元は申告計算に含めない）</p>
+            <p className="text-slate-400 mt-0.5">参考: 還元込み利益 {formatCurrency(sedoriProfitWithRedemptions)}</p>
           </div>
           <div>
             <p className="text-slate-400 mb-0.5">ケーコジ 純利益</p>
@@ -112,7 +114,8 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
           <div className="space-y-2">
             {[
               { label: '粗利（現金）', value: formatCurrency(profitCash), highlight: profitCash >= 0 ? 'green' : 'red' },
-              { label: 'ポイントサイト還元', value: formatCurrency(totalRedemptions), highlight: totalRedemptions > 0 ? 'green' : undefined },
+              { label: 'ポイントサイト還元（参考）', value: formatCurrency(totalRedemptions), highlight: totalRedemptions > 0 ? 'green' : undefined },
+              { label: '参考：還元込み粗利', value: formatCurrency(sedoriProfitWithRedemptions), highlight: sedoriProfitWithRedemptions >= 0 ? 'green' : 'red' },
               { label: 'せどり経費', value: formatCurrency(totalExpenses) },
               { label: '期末在庫', value: formatCurrency(endInventory), note: '翌年繰越' },
               { label: '参考：付与P含む粗利', value: formatCurrency(profitWithPoint), highlight: profitWithPoint >= 0 ? 'green' : 'red' },

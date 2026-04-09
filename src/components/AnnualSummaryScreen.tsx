@@ -52,7 +52,8 @@ export function AnnualSummaryScreen({ userId, products }: AnnualSummaryScreenPro
     total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
   }));
   const pointBenefit = profitWithPoint - profitCash;
-  const taxableIncome = profitCash + totalRedemptions - totalExpenses;
+  const taxableIncome = profitCash - totalExpenses;
+  const profitCashWithRedemptions = profitCash + totalRedemptions;
 
   const rows: { label: string; value: string | number; note?: string; highlight?: 'red' | 'green' | 'blue' }[] = [
     { label: '売上合計', value: formatCurrency(revenue), note: '売却価格の合計', highlight: 'blue' },
@@ -60,9 +61,10 @@ export function AnnualSummaryScreen({ userId, products }: AnnualSummaryScreenPro
     { label: '粗利（現金）', value: formatCurrency(profitCash), note: '売上 - 仕入（確定申告の計算基準）', highlight: profitCash >= 0 ? 'green' : 'red' },
     { label: '付与ポイント合計（参考）', value: formatCurrency(pointBenefit), note: '獲得ポイントの円換算。使用時に仕入コスト減として反映' },
     { label: '粗利（P含む・参考）', value: formatCurrency(profitWithPoint), note: '粗利（現金）＋付与ポイント。参考値のため申告には使わない', highlight: profitWithPoint >= 0 ? 'green' : 'red' },
-    { label: 'ポイントサイト還元合計', value: formatCurrency(totalRedemptions), note: 'モッピー・ハピタス等の換金額（雑所得として課税対象）', highlight: totalRedemptions > 0 ? 'green' : undefined },
+    { label: 'ポイントサイト還元合計（参考）', value: formatCurrency(totalRedemptions), note: 'モッピー・ハピタス等の換金額。利益の参考値として表示', highlight: totalRedemptions > 0 ? 'green' : undefined },
+    { label: '粗利（現金）+ 還元（参考）', value: formatCurrency(profitCashWithRedemptions), note: '還元を利益に加算した参考値（申告計算には含めない）', highlight: profitCashWithRedemptions >= 0 ? 'green' : 'red' },
     { label: '経費合計', value: formatCurrency(totalExpenses), note: '梱包・送料・交通費など' },
-    { label: '概算課税所得', value: formatCurrency(taxableIncome), note: '粗利（現金）+ ポイントサイト還元 - 経費', highlight: taxableIncome >= 0 ? 'green' : 'red' },
+    { label: '概算課税所得', value: formatCurrency(taxableIncome), note: '粗利（現金）- 経費（還元は含めない）', highlight: taxableIncome >= 0 ? 'green' : 'red' },
     { label: '期末在庫金額', value: formatCurrency(endInventory), note: '在庫商品の仕入合計（翌年繰越・棚卸資産）' },
     { label: '売却件数', value: `${soldThisYear.length} 件`, note: '対象年に売却確定した商品数' },
   ];
