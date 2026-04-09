@@ -56,7 +56,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
   return (
     <div className="space-y-6">
       {/* 年間サマリー合計 */}
-      <div className="glass-panel p-5">
+      <div className="glass-panel p-5 bg-gradient-to-br from-white/85 via-emerald-50/70 to-amber-50/70">
         <p className="text-xs text-slate-500 font-semibold mb-1">{thisYear}年 副業合計純利益</p>
         <p className={`text-4xl font-black tracking-tight ${totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
           ¥{totalProfit.toLocaleString()}
@@ -89,10 +89,10 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
           {/* せどり */}
           <button
             onClick={() => onSelectSection('sedori')}
-            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/90 active:scale-[0.98] transition text-left"
+            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/95 active:scale-[0.98] transition text-left bg-gradient-to-br from-white/90 to-cyan-50/60"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-100 flex items-center justify-center flex-shrink-0">
-              <Package className="w-6 h-6 text-sky-600" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Package className="w-6 h-6 text-teal-700" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-slate-900">せどり</p>
@@ -110,10 +110,10 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
           {/* ケーコジ */}
           <button
             onClick={() => onSelectSection('keikoji')}
-            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/90 active:scale-[0.98] transition text-left"
+            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/95 active:scale-[0.98] transition text-left bg-gradient-to-br from-white/90 to-slate-100/65"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center flex-shrink-0">
-              <Smartphone className="w-6 h-6 text-violet-600" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-cyan-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Smartphone className="w-6 h-6 text-slate-700" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-slate-900">ケーコジ</p>
@@ -131,9 +131,9 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
           {/* 年間サマリー */}
           <button
             onClick={() => onSelectSection('annualSummary')}
-            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/90 active:scale-[0.98] transition text-left"
+            className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/95 active:scale-[0.98] transition text-left bg-gradient-to-br from-white/90 to-amber-50/70"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0 shadow-sm">
               <FileText className="w-6 h-6 text-amber-600" />
             </div>
             <div className="flex-1 min-w-0">

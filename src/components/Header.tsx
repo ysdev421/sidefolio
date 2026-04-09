@@ -10,10 +10,10 @@ interface HeaderProps {
 }
 
 const SECTION_LABELS: Record<string, { sub: string; title: string; gradient: string }> = {
-  home: { sub: 'Side Business Portfolio', title: 'SideFolio', gradient: 'from-violet-700 via-indigo-600 to-blue-700' },
-  sedori: { sub: 'Resale Management', title: 'せどり管理', gradient: 'from-cyan-700 via-sky-600 to-blue-700' },
-  keikoji: { sub: 'MNP Management', title: 'ケーコジ', gradient: 'from-violet-700 via-purple-600 to-indigo-700' },
-  annualSummary: { sub: 'Annual Summary', title: '年間サマリー', gradient: 'from-amber-600 via-orange-500 to-rose-500' },
+  home: { sub: 'Side Business Portfolio', title: 'SideFolio', gradient: 'from-emerald-700 via-teal-600 to-cyan-700' },
+  sedori: { sub: 'Resale Management', title: 'せどり管理', gradient: 'from-teal-700 via-cyan-600 to-sky-700' },
+  keikoji: { sub: 'MNP Management', title: 'ケーコジ', gradient: 'from-slate-700 via-cyan-700 to-teal-700' },
+  annualSummary: { sub: 'Annual Summary', title: '年間サマリー', gradient: 'from-amber-600 via-orange-500 to-emerald-600' },
 };
 
 export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
@@ -23,21 +23,21 @@ export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/50 border-b border-white/60">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-white/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               {appSection !== 'home' && onBack && (
                 <button
                   onClick={onBack}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg transition -ml-1"
+                  className="p-1.5 rounded-lg transition -ml-1 bg-white/65 hover:bg-white"
                   title="ホームに戻る"
                 >
                   <ChevronLeft className="w-5 h-5 text-slate-600" />
                 </button>
               )}
               <div>
-                <p className="text-xs tracking-[0.18em] text-soft uppercase">{label.sub}</p>
+                <p className="text-xs tracking-[0.14em] text-soft uppercase font-semibold">{label.sub}</p>
                 <h1 className={`text-xl sm:text-2xl font-black bg-gradient-to-r ${label.gradient} bg-clip-text text-transparent`}>
                   {label.title}
                 </h1>
@@ -49,7 +49,7 @@ export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
 
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="glass-panel p-2.5 text-slate-700 hover:bg-white/90 transition"
+                className="glass-panel p-2.5 text-slate-700 hover:bg-white/95 transition"
                 title="パスワード変更"
               >
                 <KeyRound className="w-5 h-5" />
@@ -57,7 +57,7 @@ export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
 
               <button
                 onClick={logout}
-                className="glass-panel p-2.5 text-rose-600 hover:bg-rose-50/80 transition"
+                className="glass-panel p-2.5 text-rose-600 hover:bg-rose-50/90 transition"
                 title="ログアウト"
               >
                 <LogOut className="w-5 h-5" />

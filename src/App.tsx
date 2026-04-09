@@ -217,7 +217,7 @@ function App() {
         onBack={appSection !== 'home' ? handleBackToHome : undefined}
       />
 
-      <main className={`flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 ${appSection === 'sedori' ? 'pb-24' : 'pb-6'}`}>
+      <main className={`flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 animate-fade-in ${appSection === 'sedori' ? 'pb-24' : 'pb-6'}`}>
         <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-600">読み込み中...</div>}>
           {appSection === 'home' ? (
             <HomeScreen

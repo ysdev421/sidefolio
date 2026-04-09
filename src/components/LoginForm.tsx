@@ -61,12 +61,12 @@ export function LoginForm({ onSuccess }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-cyan-50 to-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="glass-panel p-8 space-y-6 bg-gradient-to-br from-white/90 to-white/75">
           <div className="text-center space-y-2">
             <div className="flex justify-center mb-4">
-              <div className="bg-gradient-to-br from-sky-500 to-blue-600 p-3 rounded-lg">
+              <div className="bg-gradient-to-br from-teal-500 to-cyan-600 p-3 rounded-lg shadow-md shadow-teal-500/30">
                 <LogIn className="w-8 h-8 text-white" />
               </div>
             </div>
@@ -84,7 +84,7 @@ export function LoginForm({ onSuccess }: LoginProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
                   placeholder="your@email.com"
                 />
               </div>
@@ -99,7 +99,7 @@ export function LoginForm({ onSuccess }: LoginProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
                   placeholder="••••••••"
                 />
               </div>
@@ -111,7 +111,7 @@ export function LoginForm({ onSuccess }: LoginProps) {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {authLoading && <Loader className="w-5 h-5 animate-spin" />}
               {isLogin ? 'ログイン' : '登録'}
@@ -123,7 +123,7 @@ export function LoginForm({ onSuccess }: LoginProps) {
               <button
                 type="button"
                 onClick={handleResetPassword}
-                className="text-sm text-slate-600 hover:text-sky-700 transition"
+                className="text-sm text-slate-600 hover:text-teal-700 transition"
               >
                 パスワードを忘れた場合
               </button>
@@ -136,7 +136,7 @@ export function LoginForm({ onSuccess }: LoginProps) {
                 setError('');
                 setInfo('');
               }}
-              className="text-sky-600 hover:text-sky-700 font-medium text-sm transition"
+              className="text-teal-600 hover:text-teal-700 font-medium text-sm transition"
             >
               {isLogin ? 'アカウントを持っていませんか？登録する' : 'ログインする'}
             </button>
