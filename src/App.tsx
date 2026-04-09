@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useState } from 'react';
-import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, Database, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
+import { Activity, BarChart3, BookOpen, ChevronLeft, CreditCard, FileText, History, List, MapPin, Plus, Receipt, RefreshCw, Settings, Truck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
@@ -32,9 +32,6 @@ const StatusBatchManager = lazy(() =>
 const ProductMasterManager = lazy(() =>
   import('@/components/ProductMasterManager').then((m) => ({ default: m.ProductMasterManager }))
 );
-const AdminJanManager = lazy(() =>
-  import('@/components/AdminJanManager').then((m) => ({ default: m.AdminJanManager }))
-);
 const SaleHistoryScreen = lazy(() =>
   import('@/components/SaleHistoryScreen').then((m) => ({ default: m.SaleHistoryScreen }))
 );
@@ -62,7 +59,7 @@ const SidefolioAnnualSummary = lazy(() =>
 
 type AppSection = 'home' | 'sedori' | 'keikoji' | 'annualSummary';
 type Screen = 'summary' | 'list' | 'sale' | 'saleHistory' | 'admin';
-type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'adminJanManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager' | 'pointSiteRedemptionManager' | 'githubActionsMonitor';
+type AppView = 'system' | 'purchaseLocationMaster' | 'saleLocationMaster' | 'statusBatchManager' | 'productMasterManager' | 'expenseManager' | 'annualSummary' | 'giftCardManager' | 'pointSiteRedemptionManager' | 'githubActionsMonitor';
 
 function App() {
   const { authLoading } = useAuth();
@@ -93,12 +90,6 @@ function App() {
     getUserPointSiteRedemptions(user.id).then(setRedemptions).catch(() => setRedemptions([]));
     getUserKeikojiContracts(user.id).then(setKeikojiContracts).catch(() => setKeikojiContracts([]));
   }, [user]);
-
-  const adminEmails = String(import.meta.env.VITE_ADMIN_EMAILS || '')
-    .split(',')
-    .map((v) => v.trim().toLowerCase())
-    .filter(Boolean);
-  const isAdmin = adminEmails.length > 0 && adminEmails.includes((user?.email || '').toLowerCase());
 
   const filteredProducts = products;
 
@@ -271,8 +262,6 @@ function App() {
                 <PointSiteRedemptionManager userId={user.id} />
               ) : appView === 'githubActionsMonitor' ? (
                 <GithubActionsMonitor userId={user.id} />
-              ) : appView === 'adminJanManager' && isAdmin ? (
-                <AdminJanManager />
               ) : null}
             </>
           ) : screen === 'admin' ? (
@@ -289,7 +278,6 @@ function App() {
                   { view: 'githubActionsMonitor' as const, label: 'GitHub Actions\n監視', icon: Activity, color: 'from-indigo-100 to-blue-100 text-indigo-700' },
                   { view: 'expenseManager' as const, label: '経費管理', icon: Receipt, color: 'from-rose-100 to-pink-100 text-rose-600' },
                   { view: 'annualSummary' as const, label: '年間サマリー\n（確定申告用）', icon: FileText, color: 'from-amber-100 to-orange-100 text-amber-600' },
-                  ...(isAdmin ? [{ view: 'adminJanManager' as const, label: 'JAN抽出/投入\n（管理者）', icon: Database, color: 'from-slate-100 to-slate-200 text-slate-600' }] : []),
                 ]).map(({ view, label, icon: Icon, color }) => (
                   <button
                     key={view}
