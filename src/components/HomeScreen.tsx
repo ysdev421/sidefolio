@@ -43,7 +43,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
   const sedoriTotalProfit = sedoriCashProfit + redemptionTotal;
   const inventoryCount = products.filter((p) => p.status === 'inventory' || p.status === 'pending').length;
 
-  // ケーコジ利益（契約日が今年のもの）
+  // 回線案件管理の利益（契約日が今年のもの）
   const keikojiThisYear = keikojiContracts.filter((c) =>
     c.contractedAt.startsWith(`${thisYear}-`)
   );
@@ -73,7 +73,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
             )}
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 mb-0.5">ケーコジ</p>
+            <p className="text-[10px] text-slate-400 mb-0.5">回線案件管理</p>
             <p className={`text-sm font-bold ${keikojiProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               ¥{keikojiProfit.toLocaleString()}
             </p>
@@ -107,7 +107,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
             <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
           </button>
 
-          {/* ケーコジ */}
+          {/* 回線案件管理 */}
           <button
             onClick={() => onSelectSection('keikoji')}
             className="w-full glass-panel p-5 flex items-center gap-4 hover:bg-white/95 active:scale-[0.98] transition text-left bg-gradient-to-br from-white/90 to-slate-100/65"
@@ -116,7 +116,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
               <Smartphone className="w-6 h-6 text-slate-700" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900">ケーコジ</p>
+              <p className="font-bold text-slate-900">回線案件管理</p>
               <p className="text-xs text-slate-500 mt-0.5">
                 {thisYear}年利益{' '}
                 <span className={`font-semibold ${keikojiProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>

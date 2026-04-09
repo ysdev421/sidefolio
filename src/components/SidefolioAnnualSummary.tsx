@@ -60,7 +60,7 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
   const sedoriTaxable = profitCash - totalExpenses;
   const sedoriProfitWithRedemptions = profitCash + totalRedemptions;
 
-  // ケーコジ
+  // 回線案件管理
   const keikojiProfit = keikojiContracts.reduce((s, c) => s + calcKeikojiProfit(c), 0);
   const keikojiCB = keikojiContracts.reduce((s, c) => s + (c.cashback ?? 0), 0);
   const keikojiExpense = keikojiContracts.reduce((s, c) => s + calcKeikojiExpense(c), 0);
@@ -95,7 +95,7 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
             <p className="text-slate-400 mt-0.5">参考: 還元込み利益 {formatCurrency(sedoriProfitWithRedemptions)}</p>
           </div>
           <div>
-            <p className="text-slate-400 mb-0.5">ケーコジ 純利益</p>
+            <p className="text-slate-400 mb-0.5">回線案件管理 純利益</p>
             <p className={`font-bold text-sm ${keikojiProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(keikojiProfit)}</p>
             <p className="text-slate-400 mt-0.5">{keikojiContracts.length}回線 CB{formatCurrency(keikojiCB)} - 経費{formatCurrency(keikojiExpense)}</p>
           </div>
@@ -132,10 +132,10 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
         </div>
       )}
 
-      {/* ケーコジ内訳 */}
+      {/* 回線案件管理内訳 */}
       {!loading && (
         <div className="glass-panel p-4">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">ケーコジ内訳</h3>
+          <h3 className="text-sm font-bold text-slate-700 mb-3">回線案件管理内訳</h3>
           {keikojiContracts.length === 0 ? (
             <p className="text-sm text-slate-500">{year}年の契約データがありません</p>
           ) : (
@@ -168,9 +168,9 @@ export function SidefolioAnnualSummary({ userId, products }: SidefolioAnnualSumm
         </button>
         {showIncomeHint && (
           <div className="mt-3 space-y-3 text-xs">
-            <div><p className="font-bold text-slate-800">雑所得</p><p className="text-slate-600 mt-0.5">継続的だが小規模・帳簿義務なし。せどり・ケーコジとも多くの場合ここに該当。</p></div>
+            <div><p className="font-bold text-slate-800">雑所得</p><p className="text-slate-600 mt-0.5">継続的だが小規模・帳簿義務なし。せどり・回線案件管理とも多くの場合ここに該当。</p></div>
             <div><p className="font-bold text-slate-800">事業所得</p><p className="text-slate-600 mt-0.5">継続的・相当規模（年300万円超が目安）・青色申告で65万円控除あり・帳簿義務あり。</p></div>
-            <div><p className="font-bold text-slate-800">一時所得（ケーコジCBに注意）</p><p className="text-slate-600 mt-0.5">ケーコジのCBは一時所得と判断される可能性あり。年間50万円控除あり。継続的に行う場合は雑所得になることも。</p></div>
+            <div><p className="font-bold text-slate-800">一時所得（回線案件管理CBに注意）</p><p className="text-slate-600 mt-0.5">回線案件管理のCBは一時所得と判断される可能性あり。年間50万円控除あり。継続的に行う場合は雑所得になることも。</p></div>
             <p className="text-slate-400 pt-2 border-t border-slate-100">※ 判断に迷う場合は税理士に相談することを推奨します。</p>
           </div>
         )}

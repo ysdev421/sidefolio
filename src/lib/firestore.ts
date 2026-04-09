@@ -1305,7 +1305,7 @@ export async function deletePointSiteRedemption(id: string): Promise<void> {
   await deleteDoc(doc(db, 'point_site_redemptions', id));
 }
 
-// ケーコジ回線管理
+// 回線案件管理
 export async function getUserKeikojiContracts(userId: string): Promise<KeikojiContract[]> {
   const q = query(collection(db, 'keikoji_contracts'), where('userId', '==', userId));
   const snap = await getDocs(q);
@@ -1366,4 +1366,5 @@ export async function updateKeikojiContract(
 export async function deleteKeikojiContract(id: string): Promise<void> {
   await deleteDoc(doc(db, 'keikoji_contracts', id));
 }
+
 

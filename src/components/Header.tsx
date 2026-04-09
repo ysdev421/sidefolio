@@ -12,7 +12,7 @@ interface HeaderProps {
 const SECTION_LABELS: Record<string, { sub: string; title: string; gradient: string }> = {
   home: { sub: 'Side Business Portfolio', title: 'SideFolio', gradient: 'from-emerald-700 via-teal-600 to-cyan-700' },
   sedori: { sub: 'Resale Management', title: 'せどり管理', gradient: 'from-teal-700 via-cyan-600 to-sky-700' },
-  keikoji: { sub: 'MNP Management', title: 'ケーコジ', gradient: 'from-slate-700 via-cyan-700 to-teal-700' },
+  keikoji: { sub: 'MNP Management', title: '回線案件管理', gradient: 'from-slate-700 via-cyan-700 to-teal-700' },
   annualSummary: { sub: 'Annual Summary', title: '年間サマリー', gradient: 'from-amber-600 via-orange-500 to-emerald-600' },
 };
 
@@ -71,3 +71,4 @@ export function Header({ userName, appSection = 'home', onBack }: HeaderProps) {
     </>
   );
 }
+
