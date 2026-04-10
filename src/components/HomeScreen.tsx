@@ -61,17 +61,14 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
       {/* 年間サマリー合計 */}
       <div className="glass-panel p-5 bg-white/85">
         <p className="text-sm text-slate-500 font-semibold mb-1">{thisYear}年 副業合計純利益</p>
-        <div className="flex items-end justify-between">
+        <div className="flex items-baseline gap-2 flex-wrap">
           <p className={`text-3xl font-black tracking-tight ${totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             ¥{totalProfit.toLocaleString()}
           </p>
           {totalProfitWithPoint !== totalProfit && (
-            <div className="text-right pb-0.5">
-              <p className="text-xs text-slate-400 leading-tight">P込み</p>
-              <p className={`text-xl font-bold leading-tight ${totalProfitWithPoint >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                ¥{totalProfitWithPoint.toLocaleString()}
-              </p>
-            </div>
+            <p className={`text-base font-semibold ${totalProfitWithPoint >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              （P込み ¥{totalProfitWithPoint.toLocaleString()}）
+            </p>
           )}
         </div>
         {/* 副業別内訳 */}
