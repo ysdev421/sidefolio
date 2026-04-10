@@ -1,6 +1,7 @@
 import { ChevronRight, FileText, Package, Smartphone } from 'lucide-react';
 import type { KeikojiContract, KeikojiHoldDays, Product, PointSiteRedemption } from '@/types';
 import { KEIKOJI_HOLD_MONTHS } from '@/types';
+import { calculateProfit } from '@/lib/utils';
 
 interface HomeScreenProps {
   products: Product[];
@@ -41,6 +42,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
     .reduce((sum, r) => sum + r.amount, 0);
 
   const sedoriTotalProfit = sedoriCashProfit + redemptionTotal;
+  const sedoriPointProfit = soldThisYear.reduce((sum, p) => sum + calculateProfit(p), 0) + redemptionTotal;
   const inventoryCount = products.filter((p) => p.status === 'inventory' || p.status === 'pending').length;
 
   // 回線案件管理の利益（契約日が今年のもの）
@@ -52,6 +54,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
 
   // 合計
   const totalProfit = sedoriTotalProfit + keikojiProfit;
+  const totalProfitWithPoint = sedoriPointProfit + keikojiProfit;
 
   return (
     <div className="space-y-6">
@@ -61,6 +64,14 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
         <p className={`text-4xl font-black tracking-tight ${totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
           ¥{totalProfit.toLocaleString()}
         </p>
+        {totalProfitWithPoint !== totalProfit && (
+          <p className="text-xs text-slate-400 mt-0.5">
+            ポイント込み{' '}
+            <span className={totalProfitWithPoint >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+              ¥{totalProfitWithPoint.toLocaleString()}
+            </span>
+          </p>
+        )}
         {/* 副業別内訳 */}
         <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
           <div>
@@ -68,6 +79,9 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
             <p className={`text-sm font-bold ${sedoriTotalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               ¥{sedoriTotalProfit.toLocaleString()}
             </p>
+            {sedoriPointProfit !== sedoriTotalProfit && (
+              <p className="text-[10px] text-slate-400">P込み ¥{sedoriPointProfit.toLocaleString()}</p>
+            )}
             {redemptionTotal > 0 && (
               <p className="text-[10px] text-slate-400">還元+¥{redemptionTotal.toLocaleString()}含む</p>
             )}
