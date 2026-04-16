@@ -804,14 +804,23 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
             <div className="rounded-xl bg-white/60 border border-white/80 px-3 py-2 flex items-center justify-between">
               <span className="text-sm text-slate-600">実質原価</span>
               <div className="text-right">
-                <span className="text-base font-bold text-slate-900">
-                  {(() => {
-                    const purchase = parseFloat(formData.purchasePrice) || 0;
-                    const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
-                    return (purchase - earned).toLocaleString('ja-JP');
-                  })()} 円
-                </span>
-                <span className="block text-[11px] text-slate-400">購入金額 - 付与P</span>
+                {(() => {
+                  const purchase = parseFloat(formData.purchasePrice) || 0;
+                  const earned = (parseFloat(formData.point) || 0) + extraPoints.reduce((s, p) => s + (parseFloat(p) || 0), 0);
+                  const effectiveCost = purchase - earned;
+                  const qty = Math.max(1, parseInt(formData.quantity, 10) || 1);
+                  return (
+                    <>
+                      <span className="text-base font-bold text-slate-900">{effectiveCost.toLocaleString('ja-JP')} 円</span>
+                      <span className="block text-[11px] text-slate-400">購入金額 - 付与P</span>
+                      {qty >= 2 && (
+                        <span className="block text-xs text-slate-500 mt-0.5">
+                          1個あたり <span className="font-semibold text-slate-700">{Math.round(effectiveCost / qty).toLocaleString('ja-JP')} 円</span>
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
