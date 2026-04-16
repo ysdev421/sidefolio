@@ -1,7 +1,7 @@
 import { ChevronRight, FileText, Package, Smartphone } from 'lucide-react';
 import type { KeikojiContract, KeikojiHoldDays, Product, PointSiteRedemption } from '@/types';
 import { KEIKOJI_HOLD_MONTHS } from '@/types';
-import { calculateProfit } from '@/lib/utils';
+import { calculateProfit, calculatePointProfit } from '@/lib/utils';
 
 interface HomeScreenProps {
   products: Product[];
@@ -25,17 +25,7 @@ export function HomeScreen({ products, redemptions, keikojiContracts, onSelectSe
     return new Date(p.saleDate).getFullYear() === thisYear;
   });
 
-  const sedoriCashProfit = soldThisYear.reduce((sum, p) => {
-    const salePrice = p.salePrice ?? 0;
-    let cost = p.purchasePrice;
-    if (p.purchaseBreakdown) {
-      cost =
-        p.purchaseBreakdown.cash +
-        p.purchaseBreakdown.giftCardUsages.reduce((s, u) => s + u.realCost, 0) +
-        p.purchaseBreakdown.pointUse;
-    }
-    return sum + (salePrice - cost);
-  }, 0);
+  const sedoriCashProfit = soldThisYear.reduce((sum, p) => sum + calculatePointProfit(p), 0);
 
   const redemptionTotal = redemptions
     .filter((r) => r.redeemedAt.startsWith(`${thisYear}-`))

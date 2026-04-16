@@ -16,11 +16,21 @@ const baseProduct: Product = {
 };
 
 describe('cost formula', () => {
-  it('actual payment equals purchase price', () => {
+  it('actual payment equals purchase price when no point deductions', () => {
     expect(getActualPayment(baseProduct)).toBe(71219);
   });
 
-  it('effective cost = purchase price - earned point', () => {
+  it('actual payment deducts reservePointUse and immediatePointUse', () => {
+    const p: Product = { ...baseProduct, reservePointUse: 1000, immediatePointUse: 200 };
+    expect(getActualPayment(p)).toBe(71219 - 1000 - 200);
+  });
+
+  it('effective cost = actual payment - earned point', () => {
     expect(getEffectiveCost(baseProduct)).toBe(71219 - 9314);
+  });
+
+  it('effective cost deducts all three when combined', () => {
+    const p: Product = { ...baseProduct, reservePointUse: 1000, immediatePointUse: 200 };
+    expect(getEffectiveCost(p)).toBe(71219 - 1000 - 200 - 9314);
   });
 });

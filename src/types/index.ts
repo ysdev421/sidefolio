@@ -59,6 +59,9 @@ export interface Product {
   kaitoriPrice?: number;
   kaitoriPriceAt?: string;
   purchaseBreakdown?: PurchaseBreakdown;
+  couponDiscount?: number;     // クーポン値引き額（記録のみ・元値の参考表示用）
+  reservePointUse?: number;    // 保有ポイント使用額（仕入れ原価から差し引く）
+  immediatePointUse?: number;  // 今すぐポイント使用額・ヤフショのみ（仕入れ原価から差し引く）
   createdAt: string;
   updatedAt: string;
 }

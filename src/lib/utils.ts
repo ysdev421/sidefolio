@@ -20,8 +20,10 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+// 税務上の仕入れ原価 = 購入金額（クーポン後）- 保有P使用 - 今すぐP使用
 export function getActualPayment(product: Product): number {
-  return product.purchasePrice;
+  const pointDeductions = (product.reservePointUse ?? 0) + (product.immediatePointUse ?? 0);
+  return product.purchasePrice - pointDeductions;
 }
 
 export function getRemainingActualPayment(product: Product): number {
@@ -31,14 +33,17 @@ export function getRemainingActualPayment(product: Product): number {
   return getActualPayment(product) * (available / total);
 }
 
+// ポイント込み実質原価（参考表示用）= 仕入れ原価 - 付与ポイント
 export function getEffectiveCost(product: Product): number {
+  const base = getActualPayment(product);
   if (product.purchaseBreakdown) {
     const { cash, giftCardUsages, pointUse } = product.purchaseBreakdown;
     const giftCardRealCost = giftCardUsages.reduce((s, u) => s + u.realCost, 0);
     const giftCardEarnedP = giftCardUsages.reduce((s, u) => s + u.earnedPointAlloc, 0);
-    return cash + giftCardRealCost + pointUse - giftCardEarnedP - product.point;
+    const pointDeductions = (product.reservePointUse ?? 0) + (product.immediatePointUse ?? 0);
+    return cash + giftCardRealCost + pointUse - giftCardEarnedP - product.point - pointDeductions;
   }
-  return product.purchasePrice - product.point;
+  return base - product.point;
 }
 
 export function calculateProfit(product: Product): number {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { getUserExpenses, getUserPointSiteRedemptions } from '@/lib/firestore';
-import { calculateProfit, calculatePointProfit, formatCurrency, getRemainingActualPayment } from '@/lib/utils';
+import { calculateProfit, calculatePointProfit, formatCurrency, getActualPayment, getRemainingActualPayment } from '@/lib/utils';
 import type { Expense, ExpenseCategory, PointSiteRedemption, Product } from '@/types';
 
 const CATEGORIES: ExpenseCategory[] = ['梱包資材', '送料', '交通費', '通信費', 'ツール・サブスク', 'その他'];
@@ -39,7 +39,7 @@ export function AnnualSummaryScreen({ userId, products }: AnnualSummaryScreenPro
   });
 
   const revenue = soldThisYear.reduce((s, p) => s + (p.salePrice || 0), 0);
-  const cogs = soldThisYear.reduce((s, p) => s + p.purchasePrice, 0);
+  const cogs = soldThisYear.reduce((s, p) => s + getActualPayment(p), 0);
   const profitCash = soldThisYear.reduce((s, p) => s + calculatePointProfit(p), 0);
   const profitWithPoint = soldThisYear.reduce((s, p) => s + calculateProfit(p), 0);
   const endInventory = products

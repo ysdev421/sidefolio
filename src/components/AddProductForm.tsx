@@ -67,6 +67,10 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [breakdownCash, setBreakdownCash] = useState('');
   const [breakdownGiftUsages, setBreakdownGiftUsages] = useState<{ cardId: string; amount: string }[]>([]);
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState('');
+  const [reservePointUse, setReservePointUse] = useState('');
+  const [immediatePointUse, setImmediatePointUse] = useState('');
   const [breakdownPointUse, setBreakdownPointUse] = useState('0');
   const [templates, setTemplates] = useState<ProductTemplate[]>([]);
   const [masters, setMasters] = useState<ProductMaster[]>([]);
@@ -321,6 +325,10 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
         return id;
       })()) : undefined;
 
+      const couponDiscountNum = parseFloat(couponDiscount) || 0;
+      const reservePointUseNum = parseFloat(reservePointUse) || 0;
+      const immediatePointUseNum = parseFloat(immediatePointUse) || 0;
+
       await createProduct({
         ...(normalizedJan ? { janCode: normalizedJan } : {}),
         productName: formData.productName,
@@ -335,6 +343,9 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
         ...(formData.memo.trim() ? { memo: formData.memo.trim() } : {}),
         ...(purchaseBreakdown ? { purchaseBreakdown } : {}),
         ...(activeGroupId ? { purchaseGroupId: activeGroupId } : {}),
+        ...(couponDiscountNum > 0 ? { couponDiscount: couponDiscountNum } : {}),
+        ...(reservePointUseNum > 0 ? { reservePointUse: reservePointUseNum } : {}),
+        ...(immediatePointUseNum > 0 ? { immediatePointUse: immediatePointUseNum } : {}),
       });
 
       await upsertProductTemplate(userId, {
@@ -384,6 +395,10 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
       setBreakdownGiftUsages([]);
       setBreakdownCash('');
       setBreakdownPointUse('0');
+      setShowDiscount(false);
+      setCouponDiscount('');
+      setReservePointUse('');
+      setImmediatePointUse('');
 
       if (groupMode) {
         setGroupCount((c) => c + 1);
@@ -823,6 +838,99 @@ export function AddProductForm({ userId, initialJanCode, initialProductName, onC
                 })()}
               </div>
             </div>
+          </div>
+
+          {/* 割引・ポイント使用内訳 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowDiscount((v) => !v)}
+              className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition"
+            >
+              {showDiscount ? '▲ 割引・ポイント使用内訳を閉じる' : '▼ クーポン・ポイント使用内訳を入力'}
+            </button>
+            {showDiscount && (
+              <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-3">
+                <p className="text-xs text-orange-700 font-semibold">購入金額（クーポン後）から差し引く項目を入力してください</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">保有ポイント使用</label>
+                    <NumericInput
+                      integer
+                      value={reservePointUse}
+                      onChange={(e) => setReservePointUse(e.target.value)}
+                      className="input-field py-1.5 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      今すぐポイント使用
+                      <span className="ml-1 text-[10px] text-orange-500 font-semibold">Yahoo限定</span>
+                    </label>
+                    <NumericInput
+                      integer
+                      value={immediatePointUse}
+                      onChange={(e) => setImmediatePointUse(e.target.value)}
+                      className="input-field py-1.5 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    クーポン値引き
+                    <span className="ml-1 text-[10px] text-slate-400">（記録のみ・購入金額に既に反映済み）</span>
+                  </label>
+                  <NumericInput
+                    integer
+                    value={couponDiscount}
+                    onChange={(e) => setCouponDiscount(e.target.value)}
+                    className="input-field py-1.5 text-sm"
+                    placeholder="0"
+                  />
+                </div>
+                {/* 計算プレビュー */}
+                {(() => {
+                  const purchase = parseFloat(formData.purchasePrice) || 0;
+                  const reserve = parseFloat(reservePointUse) || 0;
+                  const immediate = parseFloat(immediatePointUse) || 0;
+                  const coupon = parseFloat(couponDiscount) || 0;
+                  const actualCost = purchase - reserve - immediate;
+                  const listPrice = purchase + coupon;
+                  return (
+                    <div className="rounded-lg bg-white/70 px-3 py-2 space-y-1 text-xs">
+                      {coupon > 0 && (
+                        <div className="flex justify-between text-slate-500">
+                          <span>元値（参考）</span>
+                          <span>¥{listPrice.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-500">
+                        <span>購入金額（クーポン後）</span>
+                        <span>¥{purchase.toLocaleString()}</span>
+                      </div>
+                      {reserve > 0 && (
+                        <div className="flex justify-between text-slate-500">
+                          <span>保有P使用</span>
+                          <span>- ¥{reserve.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {immediate > 0 && (
+                        <div className="flex justify-between text-slate-500">
+                          <span>今すぐP使用</span>
+                          <span>- ¥{immediate.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-slate-800 border-t border-slate-200 pt-1">
+                        <span>仕入れ原価</span>
+                        <span>¥{actualCost.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
 
           {/* 支払い内訳（ギフトカード使用時） */}
