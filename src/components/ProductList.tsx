@@ -1,36 +1,9 @@
-﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Copy, Search, SlidersHorizontal } from 'lucide-react';
 import { RichDatePicker } from '@/components/RichDatePicker';
 import { EditProductForm } from './EditProductForm';
 import { calculatePointProfit, calculateProfit, copyToClipboard, formatCurrency, formatDate, getEffectiveCost } from '@/lib/utils';
 import type { Product } from '@/types';
-
-function ProductNameButton({ name, onClick }: { name: string; onClick: () => void }) {
-  const ref = useRef<HTMLButtonElement>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // まず「少し小さいフォント・1行」で試す
-    el.style.whiteSpace = 'nowrap';
-    el.style.fontSize = '12.5px';
-    if (el.scrollWidth <= el.clientWidth) return; // 1行に収まった
-    // 収まらなければ通常フォント・折り返しに戻す
-    el.style.whiteSpace = '';
-    el.style.fontSize = '';
-  }, [name]);
-
-  return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={onClick}
-      className="font-semibold text-slate-900 text-left hover:text-sky-700 transition-colors w-full break-words"
-    >
-      {name}
-    </button>
-  );
-}
 
 interface ProductListProps {
   products: Product[];
@@ -428,8 +401,14 @@ export function ProductList({
             {product.purchaseLocation}
           </p>
         </div>
-        {/* 2行目: 商品名（短ければ縮小1行・長ければ折り返し） */}
-        <ProductNameButton name={product.productName} onClick={() => setEditingProduct(product)} />
+        {/* 2行目: 商品名（折り返しあり） */}
+        <button
+          type="button"
+          onClick={() => setEditingProduct(product)}
+          className="font-semibold text-slate-900 text-left hover:text-sky-700 transition-colors w-full break-words"
+        >
+          {product.productName}
+        </button>
       </div>
 
       <div className="flex items-center justify-between gap-2 text-sm">
