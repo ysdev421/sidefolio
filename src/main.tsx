@@ -2,6 +2,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 
+if (import.meta.env.DEV) {
+  import('eruda').then((m) => m.default.init());
+}
+
 const requiredEnvKeys = [
   'VITE_FIREBASE_API_KEY',
   'VITE_FIREBASE_AUTH_DOMAIN',
