@@ -6,7 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useStore } from '@/lib/store';
 import { copyToClipboard } from '@/lib/utils';
 import { fetchKaitoriPrice } from '@/lib/kaitoriPrice';
-import { addKaitoriPriceHistory, getPurchaseLocationUsageCounts, getUserPurchaseLocations } from '@/lib/firestore';
+import { addKaitoriPriceHistory, getPurchaseLocationUsageCounts, getUserPurchaseLocations, getUserSaleLocations } from '@/lib/firestore';
 import type { Product } from '@/types';
 
 interface EditProductFormProps {
@@ -20,6 +20,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   const { updateProductData } = useProducts(userId);
   const loading = useStore((state) => state.loading);
   const [purchaseLocations, setPurchaseLocations] = useState<string[]>([product.purchaseLocation].filter(Boolean));
+  const [saleLocations, setSaleLocations] = useState<string[]>([]);
   const [janCopied, setJanCopied] = useState(false);
   const [kaitoriPrice, setKaitoriPrice] = useState<number | null>(product.kaitoriPrice ?? null);
   const [kaitoriSearchUrl, setKaitoriSearchUrl] = useState(
@@ -60,9 +61,10 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
   useEffect(() => {
     const loadLocations = async () => {
       try {
-        const [rows, usageCounts] = await Promise.all([
+        const [rows, usageCounts, saleRows] = await Promise.all([
           getUserPurchaseLocations(userId),
           getPurchaseLocationUsageCounts(userId),
+          getUserSaleLocations(userId),
         ]);
         const base = rows.length > 0 ? rows : ['メルカリ'];
         const sorted = [...base].sort((a, b) => {
@@ -71,6 +73,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
           return a.localeCompare(b, 'ja');
         });
         setPurchaseLocations(sorted);
+        setSaleLocations(saleRows);
         setFormData((prev) => ({
           ...prev,
           purchaseLocation:
@@ -634,7 +637,7 @@ export function EditProductForm({ product, userId, onDelete, onClose }: EditProd
                     list="sale-location-list"
                   />
                   <datalist id="sale-location-list">
-                    {purchaseLocations.map((loc) => <option key={loc} value={loc} />)}
+                    {saleLocations.map((loc) => <option key={loc} value={loc} />)}
                   </datalist>
                 </div>
               </div>
